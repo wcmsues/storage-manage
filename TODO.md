@@ -284,7 +284,7 @@
   - E1–E6：台账 / 明细 CSV（UTF-8 BOM + CRLF、字段转义、明细可选当前筛选或全部）；共享包导出 / 导入（整包覆盖、结构校验、导入前备份、恢复备份）、只读端来源条与「更新数据」。
   - B6：备件详情抽屉（桌面右侧 440px、iPad 60%、手机底部 Sheet），展示库房/分类/单位/备注与最近 5 笔出入库；台账行与手机卡片点击改为打开详情，管理员在详情内进编辑。
   - F1–F5：双端布局、localStorage 持久化与保存失败提示、三类空状态、深色模式、删除与清空确认。
-  - G1：单文件 `index.html`，内联全部资源（版本 0.6.0）。
+  - G1：单文件 `index.html`，内联全部资源（版本 0.6.1）。
   - G3：`file://` 兼容口径复核完成 —— 全站仅 `data:` favicon 无外链，`initPwa()` 按协议提前返回，`file://` 下不注入 manifest、不注册 SW；用户已在 Edge 双击场景手动实测 CSV 下载（BOM + CRLF）与共享包导入。
   - F6 + G4：新增 `manifest.webmanifest`（name「动力二组库房管理系统」、standalone、图标 192/512/180 + 1024 maskable）与 `sw.js`（`spare-warehouse-v0.6.0` 预缓存 index/manifest/图标；导航网络优先、断网回退 `index.html`；静态资源缓存优先 + 后台更新；activate 清旧缓存）；`index.html` 仅 http(s) 动态注入 manifest 与 apple-touch-icon 并在 load 后注册 SW，SW 更新走「有新版本可用」弹层（`SKIP_WAITING` + controllerchange 后刷新）。headless Chrome + 本地 http 实测：SW active、预缓存齐全、manifest 200、断网可打开页面、无 JS 异常、无跨源请求。
   - G2（部分）：已建仓库并推送到 `https://github.com/wcmsues/storage-manage`（`main`，首个提交 `906e64b`）；新增 `README.md`、`.gitignore`。`https://wcmsues.github.io/storage-manage/` 目前 404，待仓库 Settings → Pages 选择「Deploy from a branch / main / (root)」后生效。
@@ -321,5 +321,6 @@
 | 2026-11-26 | G3 复核完成：确认零外链（仅 data: favicon）、无 manifest/SW 引用；CSV 走 Blob + `a[download]`、共享包走 `FileReader`，均无 `file://` 限制；用户手动实测通过。明确「以磁盘文件为准，不看 toast」的判定口径，记录共享包非 UTF-8 保存时的报错文案待优化（未改） |
 | 2026-11-26 | F6 + G4 完成：新增 `manifest.webmanifest`、`sw.js`（v0.6.0 预缓存、导航网络优先 + 断网回退、静默更新、版本更新弹层）；`index.html` 增加 `initPwa()`，仅 http(s) 注入 manifest / apple-touch-icon 并注册 SW，`file://` 直接返回；版本号 0.6.0 |
 | 2026-11-26 | G2（部分）：新建 Git 仓库并推送 `main` 到 `github.com/wcmsues/storage-manage`；新增对外 `README.md`（使用方式、角色、隐私、目录、升级）与 `.gitignore`；`.github.io` 暂 404，待仓库内开启 Pages |
+| 2026-11-26 | 体验修正 0.6.1：手机端固定缩放 —— viewport 加 `maximum-scale=1, user-scalable=no`；`body` 与按钮/链接/label 加 `touch-action:manipulation` 去掉双击缩放；`html` 加 `text-size-adjust:100%` 防横屏文字自动放大；手机表单 `.input` 字号 15px → 16px（iOS 聚焦输入框 <16px 会强制放大）；`sw.js` 缓存名同步 0.6.1 |
 
 
