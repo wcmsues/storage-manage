@@ -109,7 +109,7 @@
 | ID | 功能 | 优先级 | 状态 | 验收要点 |
 |---|---|---|---|---|
 | G1 | 单文件 PC 版 | P0 | 完成 | `index.html` 内联全部 CSS/JS；`file://` 打开零网络请求；双击即用 |
-| G2 | GitHub Pages 部署 | P0 | 进行中 | 同一份 `index.html` 可直接访问；仅 https 下注册 SW 与 manifest；manifest 名称用「动力二组库房管理系统」；代码已推送 `main`，激活 Pages 后回归 |
+| G2 | GitHub Pages 部署 | P0 | 完成 | 已上线 `https://wcmsues.github.io/storage-manage/`：index 200、manifest（application/manifest+json）、sw.js、图标均 200；线上版本 0.6.1；SW/manifest 仅在 https 注入 |
 | G3 | file:// 兼容降级 | P0 | 完成 | SW/manifest 在 `file://` 不请求；CSV 下载、JSON 导入正常 |
 | G4 | 离线缓存 | P1 | 完成 | 首次联网加载后断网可用；版本更新有提示 |
 | G5 | 升级不丢数据 | P0 | 未开始 | 同名同路径替换文件后数据仍在；升级前提示导出共享包 |
@@ -286,10 +286,11 @@
   - F1–F5：双端布局、localStorage 持久化与保存失败提示、三类空状态、深色模式、删除与清空确认。
   - G1：单文件 `index.html`，内联全部资源（版本 0.6.1）。
   - G3：`file://` 兼容口径复核完成 —— 全站仅 `data:` favicon 无外链，`initPwa()` 按协议提前返回，`file://` 下不注入 manifest、不注册 SW；用户已在 Edge 双击场景手动实测 CSV 下载（BOM + CRLF）与共享包导入。
-  - F6 + G4：新增 `manifest.webmanifest`（name「动力二组库房管理系统」、standalone、图标 192/512/180 + 1024 maskable）与 `sw.js`（`spare-warehouse-v0.6.0` 预缓存 index/manifest/图标；导航网络优先、断网回退 `index.html`；静态资源缓存优先 + 后台更新；activate 清旧缓存）；`index.html` 仅 http(s) 动态注入 manifest 与 apple-touch-icon 并在 load 后注册 SW，SW 更新走「有新版本可用」弹层（`SKIP_WAITING` + controllerchange 后刷新）。headless Chrome + 本地 http 实测：SW active、预缓存齐全、manifest 200、断网可打开页面、无 JS 异常、无跨源请求。
-  - G2（部分）：已建仓库并推送到 `https://github.com/wcmsues/storage-manage`（`main`，首个提交 `906e64b`）；新增 `README.md`、`.gitignore`。`https://wcmsues.github.io/storage-manage/` 目前 404，待仓库 Settings → Pages 选择「Deploy from a branch / main / (root)」后生效。
-- 进行中：G2（Pages 激活后回归安装、离线与 file:// 双形态）。
-- 下一步：用户开启 Pages → 回归 G2（同一份文件可访问、PWA 可安装、SW 更新提示）→ G5（同名同路径替换不丢数据）。
+  - F6 + G4：新增 `manifest.webmanifest`（name「动力二组库房管理系统」、standalone、图标 192/512/180 + 1024 maskable）与 `sw.js`（`spare-warehouse-v0.6.1` 预缓存 index/manifest/图标；导航网络优先、断网回退 `index.html`；静态资源缓存优先 + 后台更新；activate 清旧缓存）；`index.html` 仅 http(s) 动态注入 manifest 与 apple-touch-icon 并在 load 后注册 SW，SW 更新走「有新版本可用」弹层（`SKIP_WAITING` + controllerchange 后刷新）。headless Chrome + 本地 http 实测：SW active、预缓存齐全、manifest 200、断网可打开页面、无 JS 异常、无跨源请求。
+  - G2：仓库 `https://github.com/wcmsues/storage-manage`（`main`），用户已开启 Pages，线上地址 `https://wcmsues.github.io/storage-manage/` 已生效；实测 index 200、manifest 200（`application/manifest+json`）、`sw.js` 200、图标 200，线上 `APP_VERSION` 0.6.1 与 `sw.js` 缓存名一致。
+  - 体验修正 0.6.1：手机端固定缩放（viewport 锁缩放、`touch-action:manipulation`、`text-size-adjust:100%`、表单手机端 16px）；移动视口实测无横向溢出、零报错。
+- 进行中：无。
+- 下一步：G5（同名同路径替换 `index.html` 后数据仍在）验证；继续收集用户使用中的小问题，按 P1 逐条修。
 - 未开始：C4、G5。
 - 已知缺口：iPad 详情用右侧 60% 抽屉（带遮罩），未做常驻 40/60 分栏（Q19 未含 iPad）；登记暂不支持一次多件（C4，P2）；台账 CSV 不随筛选导出（如需再调整）；SW 缓存名为手写常量，改版本时需同步 `sw.js` 的 `CACHE`。
 
@@ -322,5 +323,7 @@
 | 2026-11-26 | F6 + G4 完成：新增 `manifest.webmanifest`、`sw.js`（v0.6.0 预缓存、导航网络优先 + 断网回退、静默更新、版本更新弹层）；`index.html` 增加 `initPwa()`，仅 http(s) 注入 manifest / apple-touch-icon 并注册 SW，`file://` 直接返回；版本号 0.6.0 |
 | 2026-11-26 | G2（部分）：新建 Git 仓库并推送 `main` 到 `github.com/wcmsues/storage-manage`；新增对外 `README.md`（使用方式、角色、隐私、目录、升级）与 `.gitignore`；`.github.io` 暂 404，待仓库内开启 Pages |
 | 2026-11-26 | 体验修正 0.6.1：手机端固定缩放 —— viewport 加 `maximum-scale=1, user-scalable=no`；`body` 与按钮/链接/label 加 `touch-action:manipulation` 去掉双击缩放；`html` 加 `text-size-adjust:100%` 防横屏文字自动放大；手机表单 `.input` 字号 15px → 16px（iOS 聚焦输入框 <16px 会强制放大）；`sw.js` 缓存名同步 0.6.1 |
+| 2026-11-26 | 推送 0.6.1 并确认 Pages 生效：`133f18c` fix(zoom)；线上首页 / manifest / sw.js / 图标均 200，manifest MIME 为 `application/manifest+json`，线上版本 0.6.1；G2 置完成 |
+
 
 
