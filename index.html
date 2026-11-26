@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="description" content="动力二组库房管理系统：备件台账、出入库登记与共享包，数据只存本机。">
+<meta name="description" content="动力二组库房管理系统：物品与工具台账、出入库登记与共享包，数据只存本机。">
 <meta name="theme-color" content="#007AFF">
 <title>动力二组库房管理系统</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23fff'/%3E%3Cpath d='M24 22v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2' fill='none' stroke='%23007AFF' stroke-width='4' stroke-linecap='round'/%3E%3Crect x='12' y='22' width='40' height='26' rx='6' fill='none' stroke='%23007AFF' stroke-width='4'/%3E%3Cpath d='M12 33h40' stroke='%23007AFF' stroke-width='4'/%3E%3Crect x='27' y='29.5' width='10' height='7' rx='2' fill='%23007AFF'/%3E%3C/svg%3E">
@@ -75,6 +75,7 @@ body.is-gate #view{padding:0;max-width:none}
   #view{padding:20px 24px 22px}
   .tabbar{display:none}
 }
+
 @media (min-width:768px) and (max-width:1023px){
   .topnav{
     display:flex;gap:4px;position:sticky;top:0;z-index:40;
@@ -128,6 +129,18 @@ body.is-gate #view{padding:0;max-width:none}
 @media (min-width:768px){
   .nl-short{display:none}
   .nl-long{display:inline}
+}
+/* 1024–1279：侧栏收起为 64px 图标栏（DESIGN §7），把宽度让给表格 */
+@media (min-width:1024px) and (max-width:1279px){
+  .sidebar{width:64px;padding:16px 8px;gap:12px;align-items:center}
+  .brand{padding:0;justify-content:center}
+  .brand-text{display:none}
+  .sidebar .nav{width:100%}
+  .sidebar .nav-item{justify-content:center;padding:0}
+  .sidebar .nav-item .nl-short,.sidebar .nav-item .nl-long{display:none}
+  .main{margin-left:64px}
+  .mp-text{display:none}
+  .sidebar .sidebar-foot{display:flex;justify-content:center;padding:0}
 }
 .sidebar-foot{margin-top:auto;padding:0 8px 4px}
 .mode-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--label-2)}
@@ -197,7 +210,7 @@ select.input{appearance:none;-webkit-appearance:none;padding-right:36px}
   .input{height:44px;font-size:16px}
   .search-wrap{flex:1 1 100%;max-width:none}
   .search-wrap svg{left:12px}
-  .select-wrap{min-width:0;max-width:calc(50% - 5px)}
+  .select-wrap{min-width:0;flex:1 1 calc(50% - 5px);max-width:calc(50% - 5px)}
   .select-wrap::after{right:16px;width:8px;height:8px;margin-top:-5px}
   .field .select-wrap{max-width:100%}
 }
@@ -232,6 +245,10 @@ select.input{appearance:none;-webkit-appearance:none;padding-right:36px}
 .cell-sub{font-size:11px;color:var(--label-2)}
 .qty{font-size:12.5px}
 .unit{font-size:11px;color:var(--label-3);margin-left:2px;white-space:nowrap}
+/* 平板与窄桌面：列多，收窄单元格内边距，避免数量/徽章被挤压 */
+@media (min-width:768px) and (max-width:1279px){
+  .table th,.table td{padding-left:10px;padding-right:10px}
+}
 
 /* ---------- 徽章 ---------- */
 .badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:var(--r-sm);font-size:11px;line-height:1.4;white-space:nowrap}
@@ -263,8 +280,9 @@ select.input{appearance:none;-webkit-appearance:none;padding-right:36px}
 .mcard-act{position:relative;margin-left:10px;font-size:12px;color:var(--blue);line-height:1.5;padding:0 2px}
 .mcard-act::after{content:"";position:absolute;inset:-10px -8px}
 .mcard-flag{margin-left:8px;font-size:11px;color:var(--label-3)}
-@media (min-width:768px){.mlist{display:none}}
-@media (max-width:767px){.table-card{display:none}}
+/* 列表形态：≥1024 用表格，≤1023（平板竖屏 + 手机）用卡片，避免列被挤压 */
+@media (min-width:1024px){.mlist{display:none}}
+@media (max-width:1023px){.table-card{display:none}}
 
 /* ---------- 空状态 ---------- */
 .empty{
@@ -494,24 +512,37 @@ body.is-gate{background:var(--bg-page)}
 /* =========================================================
    常量与基础状态
    ========================================================= */
-const APP_VERSION = "0.6.2";
+const APP_VERSION = "0.7.0";
 const KEYS = {
-  data: "spare.warehouse.v2",
-  pin: "spare.warehouse.pin.v2",
-  bak: "spare.warehouse.bak.v1",
+  data: "spare.warehouse.v3",
+  pin: "spare.warehouse.pin.v3",
+  bak: "spare.warehouse.bak.v2",
   admin: "admin"
 };
+/* 旧版（v2）数据不再读取，仅在首次进入页提示留档 */
+const LEGACY_KEYS = { data: "spare.warehouse.v2", pin: "spare.warehouse.pin.v2" };
 const NAV = [
   { id: "ledger", label: "台账", labelLong: "库存台账", icon: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="3.5" width="13" height="13" rx="2.5"/><path d="M6.5 8h7M6.5 12h4.5"/></svg>' },
   { id: "log", label: "登记", labelLong: "出入库登记", icon: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 12.5V4.5m0 0L4.5 7M7 4.5 9.5 7M13 7.5v8m0 0 2.5-2.5M13 15.5 10.5 13"/></svg>' },
   { id: "logs", label: "明细", labelLong: "出入库明细", icon: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="4" y="2.5" width="12" height="15" rx="2"/><path d="M7 7h6M7 10h6M7 13h4"/></svg>' },
   { id: "settings", label: "设置", labelLong: "系统设置", icon: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5.2 5.2l1.4 1.4M13.4 13.4l1.4 1.4M14.8 5.2l-1.4 1.4M6.6 13.4l-1.4 1.4"/></svg>' }
 ];
+/* 页面标题与导航完整标签同源，避免两处漂移 */
+function viewTitle(id) {
+  const item = NAV.find(x => x.id === id);
+  return item ? item.labelLong : "";
+}
 const UNIT_PRESET = ["个", "节", "片", "支", "米"];
+const PART_TYPES = [
+  { id: "item", label: "物品" },
+  { id: "tool", label: "工具" }
+];
+function partType(t) { return t === "tool" ? "tool" : "item"; }
+function typeLabel(t) { return partType(t) === "tool" ? "工具" : "物品"; }
 
 let data = null;
 const ui = {
-  view: "ledger", q: "", wh: "", cat: "",
+  view: "ledger", q: "", wh: "", type: "", area: "",
   regPart: "", regType: "in",
   logQ: "", logType: "", logWh: "", logFrom: "", logTo: "", logPart: "", logLimit: 0
 };
@@ -591,35 +622,45 @@ function normalize(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
   const qty = v => { const x = Math.floor(Number(v)); return Number.isFinite(x) && x > 0 ? x : 0; };
   return {
-    version: 2,
+    version: 3,
     source: src.source && typeof src.source === "object" ? src.source : null,
     warehouses: (Array.isArray(src.warehouses) ? src.warehouses : []).map(w => ({
       id: String(w.id || uid("wh")),
-      no: String(w.no || ""),
       name: String(w.name || ""),
+      loc: String(w.loc || ""),
       manager: String(w.manager || ""),
-      phone: String(w.phone || ""),
       note: String(w.note || "")
     })),
-    parts: (Array.isArray(src.parts) ? src.parts : []).map(p => ({
-      id: String(p.id || uid("pt")),
-      warehouseId: String(p.warehouseId || ""),
-      name: String(p.name || ""),
-      model: String(p.model || ""),
-      category: String(p.category || ""),
-      unit: String(p.unit || "个"),
-      qty: qty(p.qty),
-      note: String(p.note || "")
-    })),
+    parts: (Array.isArray(src.parts) ? src.parts : []).map(p => {
+      const type = partType(p.type);
+      return {
+        id: String(p.id || uid("pt")),
+        warehouseId: String(p.warehouseId || ""),
+        type,
+        name: String(p.name || ""),
+        maker: String(p.maker || ""),
+        model: String(p.model || ""),
+        area: String(p.area || ""),
+        loc: String(p.loc || ""),
+        keeper: type === "tool" ? String(p.keeper || "") : "",
+        unit: String(p.unit || "个"),
+        qty: qty(p.qty),
+        note: String(p.note || "")
+      };
+    }),
     logs: (Array.isArray(src.logs) ? src.logs : []).map(l => ({
       id: String(l.id || uid("lg")),
       partId: String(l.partId || ""),
       part: l.part && typeof l.part === "object" ? {
         name: String(l.part.name || ""),
+        type: partType(l.part.type),
+        maker: String(l.part.maker || ""),
         model: String(l.part.model || ""),
         unit: String(l.part.unit || ""),
-        warehouseNo: String(l.part.warehouseNo || "")
-      } : { name: "", model: "", unit: "", warehouseNo: "" },
+        warehouseName: String(l.part.warehouseName || ""),
+        area: String(l.part.area || ""),
+        loc: String(l.part.loc || "")
+      } : { name: "", type: "item", maker: "", model: "", unit: "", warehouseName: "", area: "", loc: "" },
       type: l.type === "out" ? "out" : "in",
       qty: qty(l.qty),
       balance: qty(l.balance),
@@ -628,6 +669,7 @@ function normalize(raw) {
       createdAt: String(l.createdAt || ""),
       kind: l.kind === "initial" || l.kind === "reversal" ? l.kind : "normal",
       reversalOf: String(l.reversalOf || ""),
+      reason: String(l.reason || ""),
       note: String(l.note || "")
     })),
     settings: {
@@ -666,6 +708,9 @@ function assertWritable() {
 function hashExists() {
   try { return localStorage.getItem(KEYS.bak) !== null; } catch (e) { return false; }
 }
+function legacyDataExists() {
+  try { return localStorage.getItem(LEGACY_KEYS.data) !== null; } catch (e) { return false; }
+}
 
 /* =========================================================
    业务操作（所有写操作都经过 assertWritable）
@@ -673,21 +718,20 @@ function hashExists() {
 function warehouseById(id) { return data.warehouses.find(w => w.id === id) || null; }
 function warehouseLabel(id) {
   const w = warehouseById(id);
-  return w ? w.no + " · " + w.name : "库房已删除";
+  return w ? w.name + (w.loc ? " · " + w.loc : "") : "库房已删除";
 }
 function partById(id) { return data.parts.find(p => p.id === id) || null; }
 
 function addWarehouse(input) {
   assertWritable();
-  const no = String(input.no || "").trim();
   const name = String(input.name || "").trim();
-  if (!no) throw new Error("请填写库房号");
-  if (!name) throw new Error("请填写库房名称");
-  if (data.warehouses.some(w => w.no.toLowerCase() === no.toLowerCase())) throw new Error("库房号「" + no + "」已存在");
+  if (!name) throw new Error("请填写库房名");
+  if (data.warehouses.some(w => w.name === name)) throw new Error("库房「" + name + "」已存在");
   const w = {
-    id: uid("wh"), no, name,
+    id: uid("wh"),
+    name,
+    loc: String(input.loc || "").trim(),
     manager: String(input.manager || "").trim(),
-    phone: String(input.phone || "").trim(),
     note: String(input.note || "").trim()
   };
   data.warehouses.push(w);
@@ -698,14 +742,12 @@ function updateWarehouse(id, input) {
   assertWritable();
   const w = warehouseById(id);
   if (!w) throw new Error("库房不存在");
-  const no = String(input.no || "").trim();
   const name = String(input.name || "").trim();
-  if (!no) throw new Error("请填写库房号");
-  if (!name) throw new Error("请填写库房名称");
-  if (data.warehouses.some(x => x.id !== id && x.no.toLowerCase() === no.toLowerCase())) throw new Error("库房号「" + no + "」已存在");
-  w.no = no; w.name = name;
+  if (!name) throw new Error("请填写库房名");
+  if (data.warehouses.some(x => x.id !== id && x.name === name)) throw new Error("库房「" + name + "」已存在");
+  w.name = name;
+  w.loc = String(input.loc || "").trim();
   w.manager = String(input.manager || "").trim();
-  w.phone = String(input.phone || "").trim();
   w.note = String(input.note || "").trim();
   saveData();
   return w;
@@ -715,53 +757,67 @@ function removeWarehouse(id) {
   const w = warehouseById(id);
   if (!w) throw new Error("库房不存在");
   const count = data.parts.filter(p => p.warehouseId === id).length;
-  if (count > 0) throw new Error("该库房还有 " + count + " 项备件，先迁移或删除备件再删库房");
+  if (count > 0) throw new Error("该库房还有 " + count + " 项台账，先迁移或删除台账再删库房");
   data.warehouses = data.warehouses.filter(x => x.id !== id);
   saveData();
 }
 
-function createLog(part, type, qty, balance, operator, date, note, kind) {
+function createLog(part, type, qty, balance, operator, date, reason, note, kind) {
   const w = warehouseById(part.warehouseId);
   const log = {
     id: uid("lg"),
     partId: part.id,
-    part: { name: part.name, model: part.model, unit: part.unit, warehouseNo: w ? w.no : "" },
+    part: {
+      name: part.name, type: partType(part.type), maker: part.maker, model: part.model, unit: part.unit,
+      warehouseName: w ? w.name : "", area: part.area, loc: part.loc
+    },
     type, qty, balance,
     operator: operator || data.settings.operator || "管理员",
     date: date || today(),
     createdAt: new Date().toISOString(),
     kind: kind || "normal",
+    reason: reason || "",
     note: note || ""
   };
   data.logs.push(log);
   return log;
 }
 
+function duplicatePart(type, warehouseId, name, model, id) {
+  return data.parts.some(p => p.id !== id && p.warehouseId === warehouseId &&
+    p.type === type && p.name === name && p.model === model);
+}
+
 function addPart(input) {
   assertWritable();
+  const type = partType(input.type);
   const warehouseId = String(input.warehouseId || "");
-  const w = warehouseById(warehouseId);
-  if (!w) throw new Error("请选择所属库房");
+  if (!warehouseById(warehouseId)) throw new Error("请选择所属库房");
   const name = String(input.name || "").trim();
-  if (!name) throw new Error("请填写备件名称");
+  if (!name) throw new Error("请填写" + typeLabel(type) + "名称");
   const model = String(input.model || "").trim();
-  if (data.parts.some(p => p.warehouseId === warehouseId && p.name === name && p.model === model)) {
-    throw new Error("该库房已有同名同型号备件，请改走入库");
+  if (duplicatePart(type, warehouseId, name, model)) {
+    throw new Error("该库房已有同名同规格的" + typeLabel(type) + "，请改走入库");
   }
   const qty = toInt(input.qty, 0);
   if (qty < 0) throw new Error("初始数量不能为负数");
   const part = {
     id: uid("pt"),
     warehouseId,
-    name, model,
-    category: String(input.category || "").trim(),
+    type,
+    name,
+    maker: String(input.maker || "").trim(),
+    model,
+    area: String(input.area || "").trim(),
+    loc: String(input.loc || "").trim(),
+    keeper: type === "tool" ? String(input.keeper || "").trim() : "",
     unit: String(input.unit || "个").trim() || "个",
     qty,
     note: String(input.note || "").trim()
   };
   data.parts.push(part);
   if (qty > 0) {
-    createLog(part, "in", qty, qty, data.settings.operator, today(), "期初建账", "initial");
+    createLog(part, "in", qty, qty, data.settings.operator, today(), "期初建账", "", "initial");
   }
   saveData();
   return part;
@@ -770,19 +826,24 @@ function addPart(input) {
 function updatePart(id, input) {
   assertWritable();
   const part = partById(id);
-  if (!part) throw new Error("备件不存在");
+  if (!part) throw new Error("台账项不存在");
+  const type = partType(input.type || part.type);
   const name = String(input.name || "").trim();
-  if (!name) throw new Error("请填写备件名称");
+  if (!name) throw new Error("请填写" + typeLabel(type) + "名称");
   const model = String(input.model || "").trim();
   const warehouseId = String(input.warehouseId || part.warehouseId);
   if (!warehouseById(warehouseId)) throw new Error("请选择所属库房");
-  if (data.parts.some(p => p.id !== id && p.warehouseId === warehouseId && p.name === name && p.model === model)) {
-    throw new Error("该库房已有同名同型号备件，请改走入库");
+  if (duplicatePart(type, warehouseId, name, model, id)) {
+    throw new Error("该库房已有同名同规格的" + typeLabel(type) + "，请改走入库");
   }
+  part.type = type;
   part.name = name;
+  part.maker = String(input.maker || "").trim();
   part.model = model;
   part.warehouseId = warehouseId;
-  part.category = String(input.category || "").trim();
+  part.area = String(input.area || "").trim();
+  part.loc = String(input.loc || "").trim();
+  part.keeper = type === "tool" ? String(input.keeper || "").trim() : "";
   part.unit = String(input.unit || "个").trim() || "个";
   part.note = String(input.note || "").trim();
   saveData();
@@ -792,7 +853,7 @@ function updatePart(id, input) {
 function removePart(id) {
   assertWritable();
   const part = partById(id);
-  if (!part) throw new Error("备件不存在");
+  if (!part) throw new Error("台账项不存在");
   if (part.qty > 0) throw new Error("库存还有 " + part.qty + "，先出库到 0 再删除");
   data.parts = data.parts.filter(p => p.id !== id);
   saveData();
@@ -814,8 +875,10 @@ function addStockLog(input) {
   }
   const date = String(input.date || "").trim();
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("日期格式不正确");
+  const reason = String(input.reason || "").trim();
+  if (!reason) throw new Error(type === "out" ? "请填写出库事由" : "请填写入库事由");
   const balance = type === "in" ? part.qty + qty : part.qty - qty;
-  const log = createLog(part, type, qty, balance, String(input.operator || "").trim(), date || today(), String(input.note || "").trim(), "normal");
+  const log = createLog(part, type, qty, balance, String(input.operator || "").trim(), date || today(), reason, String(input.note || "").trim(), "normal");
   const before = part.qty;
   part.qty = balance;
   if (!saveData()) {
@@ -843,7 +906,7 @@ function reverseLog(logId) {
     throw new Error("库存不足，需先补入库（当前 " + part.qty + " " + part.unit + "）");
   }
   const balance = type === "in" ? part.qty + src.qty : part.qty - src.qty;
-  const log = createLog(part, type, src.qty, balance, data.settings.operator, today(), "冲正 #" + src.id, "reversal");
+  const log = createLog(part, type, src.qty, balance, data.settings.operator, today(), "冲正 #" + src.id, "", "reversal");
   log.reversalOf = src.id;
   const before = part.qty;
   part.qty = balance;
@@ -859,27 +922,32 @@ function reverseLog(logId) {
    查询
    ========================================================= */
 function sortedWarehouses() {
-  return [...data.warehouses].sort((a, b) => collator.compare(a.no, b.no) || collator.compare(a.name, b.name));
+  return [...data.warehouses].sort((a, b) => collator.compare(a.name, b.name) || collator.compare(a.loc, b.loc));
 }
 function sortedParts() {
   return [...data.parts].sort((a, b) => {
     const wa = warehouseById(a.warehouseId), wb = warehouseById(b.warehouseId);
-    return collator.compare(wa ? wa.no : "", wb ? wb.no : "") || collator.compare(a.name, b.name) || collator.compare(a.model, b.model);
+    return collator.compare(wa ? wa.name : "", wb ? wb.name : "")
+      || (partType(a.type) === partType(b.type) ? 0 : partType(a.type) === "item" ? -1 : 1)
+      || collator.compare(a.name, b.name)
+      || collator.compare(a.model, b.model);
   });
 }
 function filteredParts() {
   const q = ui.q.trim().toLowerCase();
   return sortedParts().filter(p => {
     if (ui.wh && p.warehouseId !== ui.wh) return false;
-    if (ui.cat && p.category !== ui.cat) return false;
+    if (ui.type && partType(p.type) !== ui.type) return false;
+    if (ui.area && p.area !== ui.area) return false;
     if (!q) return true;
-    const w = warehouseById(p.warehouseId) || { no: "", name: "" };
-    return [p.name, p.model, p.category, p.note, p.unit, w.no, w.name].join(" ").toLowerCase().indexOf(q) >= 0;
+    const w = warehouseById(p.warehouseId) || { name: "", loc: "" };
+    return [p.name, p.maker, p.model, p.area, p.loc, p.keeper, p.note, p.unit, w.name, w.loc]
+      .join(" ").toLowerCase().indexOf(q) >= 0;
   });
 }
-function categories() {
+function areas() {
   const set = new Set();
-  data.parts.forEach(p => { if (p.category) set.add(p.category); });
+  data.parts.forEach(p => { if (p.area) set.add(p.area); });
   return [...set].sort((a, b) => collator.compare(a, b));
 }
 function units() {
@@ -890,8 +958,8 @@ function units() {
 function kpis() {
   const ym = today().slice(0, 7);
   return {
-    parts: data.parts.length,
-    warehouses: data.warehouses.length,
+    items: data.parts.filter(p => partType(p.type) === "item").length,
+    tools: data.parts.filter(p => partType(p.type) === "tool").length,
     inMonth: data.logs.filter(l => l.type === "in" && l.kind === "normal" && String(l.date).slice(0, 7) === ym).length,
     outMonth: data.logs.filter(l => l.type === "out" && l.kind === "normal" && String(l.date).slice(0, 7) === ym).length
   };
@@ -905,11 +973,19 @@ function sortedLogs() {
 }
 function logTitle(log) {
   const p = partById(log.partId);
-  return p ? p.name : (log.part.name || "已删除备件");
+  return p ? p.name : (log.part.name || "已删除台账项");
+}
+function logMaker(log) {
+  const p = partById(log.partId);
+  return p ? p.maker : (log.part.maker || "");
 }
 function logModel(log) {
   const p = partById(log.partId);
   return p ? p.model : (log.part.model || "");
+}
+function logTypeOf(log) {
+  const p = partById(log.partId);
+  return partType(p ? p.type : log.part.type);
 }
 function reversedLogIds() {
   const set = new Set();
@@ -1017,11 +1093,14 @@ function csvText(rows) {
   return "\uFEFF" + rows.map(row => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }
 function exportLedgerCsv() {
-  if (!data.parts.length) return toast("台账还是空的，没有可导出的备件", "error");
-  const rows = [["库房号", "库房名称", "备件名称", "品牌型号", "分类", "单位", "数量", "备注"]];
+  if (!data.parts.length) return toast("台账还是空的，没有可导出的台账项", "error");
+  const rows = [["库房名", "库房库位", "类别", "名称", "厂家", "规格/型号", "库房区域", "位置", "单位", "数量", "保管维护人", "备注"]];
   sortedParts().forEach(p => {
     const w = warehouseById(p.warehouseId);
-    rows.push([w ? w.no : "", w ? w.name : "", p.name, p.model, p.category, p.unit, p.qty, p.note]);
+    rows.push([
+      w ? w.name : "", w ? w.loc : "", typeLabel(p.type), p.name, p.maker, p.model,
+      p.area, p.loc, p.unit, p.qty, p.keeper, p.note
+    ]);
   });
   try {
     downloadFile("备件台账-" + fileStamp() + ".csv", csvText(rows), "text/csv");
@@ -1035,12 +1114,12 @@ function logCsvTime(log) {
   return String(log.date || "") + (clock ? " " + clock : "");
 }
 function exportLogsCsv(logs, scopeLabel) {
-  const rows = [["时间", "类型", "备件名称", "品牌型号", "单位", "数量", "结存", "经办人", "库房号", "备注"]];
+  const rows = [["时间", "出入库", "类别", "名称", "厂家", "规格/型号", "数量", "单位", "结存", "事由", "经办人", "库房", "位置", "备注"]];
   logs.forEach(l => {
     rows.push([
-      logCsvTime(l), l.type === "in" ? "入库" : "出库",
-      logTitle(l), logModel(l), l.part.unit,
-      l.qty, l.balance, l.operator, l.part.warehouseNo, l.note
+      logCsvTime(l), l.type === "in" ? "入库" : "出库", typeLabel(logTypeOf(l)),
+      logTitle(l), logMaker(l), logModel(l),
+      l.qty, l.part.unit, l.balance, l.reason, l.operator, logWarehouseName(l), logLoc(l), l.note
     ]);
   });
   try {
@@ -1068,7 +1147,7 @@ function openLogsCsvDialog() {
 }
 function buildPackage() {
   return {
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     exportedBy: data.settings.operator || "管理员",
     warehouses: data.warehouses,
@@ -1079,13 +1158,18 @@ function buildPackage() {
 }
 function validatePackage(pkg) {
   if (!pkg || typeof pkg !== "object" || Array.isArray(pkg)) return "文件内容不是有效的共享包";
-  if (Number(pkg.version) !== 2) return "共享包版本不匹配（需要 v2）";
+  if (Number(pkg.version) !== 3) {
+    return Number(pkg.version) === 2
+      ? "这是旧版（v2）共享包，字段结构已变更，请用新版重新导出"
+      : "共享包版本不匹配（需要 v3）";
+  }
   if (!Array.isArray(pkg.warehouses) || !Array.isArray(pkg.parts) || !Array.isArray(pkg.logs)) return "共享包缺少库房、台账或明细";
   for (const w of pkg.warehouses) {
-    if (!w || typeof w.id !== "string" || typeof w.no !== "string") return "库房数据不完整";
+    if (!w || typeof w.id !== "string" || typeof w.name !== "string") return "库房数据不完整";
   }
   for (const p of pkg.parts) {
     if (!p || typeof p.id !== "string" || typeof p.warehouseId !== "string" || typeof p.name !== "string") return "台账数据不完整";
+    if (p.type !== "item" && p.type !== "tool") return "台账数据缺少物品/工具类别";
   }
   for (const l of pkg.logs) {
     if (!l || typeof l.id !== "string" || (l.type !== "in" && l.type !== "out") || !l.part) return "明细数据不完整";
@@ -1103,7 +1187,7 @@ function importPackage(pkg) {
     }
   } catch (e) {}
   data = normalize({
-    version: 2,
+    version: 3,
     source: {
       type: "shared",
       exportedBy: pkg.exportedBy || "未知",
@@ -1125,8 +1209,12 @@ function gateHTML() {
   return '<div class="gate"><div class="gate-inner">' +
     '<div class="gate-brand">' +
       '<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#FFFFFF" stroke="rgba(60,60,67,.12)"/><path d="M24 22v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2" fill="none" stroke="#007AFF" stroke-width="3.5" stroke-linecap="round"/><rect x="12" y="22" width="40" height="26" rx="6" fill="none" stroke="#007AFF" stroke-width="3.5"/><path d="M12 33h40" stroke="#007AFF" stroke-width="3.5"/><rect x="27" y="29.5" width="10" height="7" rx="2" fill="#007AFF"/></svg>' +
-      '<div><h1>动力二组库房管理系统</h1><p>备件台账 · 出入库登记 · 共享包</p></div>' +
+      '<div><h1>动力二组库房管理系统</h1><p>物品与工具台账 · 出入库登记 · 共享包</p></div>' +
     "</div>" +
+    (legacyDataExists()
+      ? '<section class="card"><h2 class="card-title">旧版本机数据已停用</h2>' +
+        '<p class="card-note">检测到 0.6.x 版本的旧数据（库房号 + 分类结构）。新版字段口径已变更，不再读取旧数据，旧数据也不会被删除。如需留档，先用 0.6.x 版本导出共享包。</p></section>'
+      : "") +
     '<section class="card">' +
       '<h2 class="card-title">第一次使用</h2>' +
       '<p class="card-note">数据只存在这台设备的浏览器里，不上传任何服务器。先设定管理员姓名与 4 位 PIN。</p>' +
@@ -1160,7 +1248,7 @@ function bindGate() {
     if (!name) { err.textContent = "请填写管理员姓名"; return; }
     if (!/^[0-9]{4}$/.test(pin)) { err.textContent = "PIN 必须是 4 位数字"; return; }
     if (pin !== pin2) { err.textContent = "两次输入的 PIN 不一致"; return; }
-    data = normalize({ version: 2, source: null, warehouses: [], parts: [], logs: [], settings: { operator: name, pageSize: 20 } });
+    data = normalize({ version: 3, source: null, warehouses: [], parts: [], logs: [], settings: { operator: name, pageSize: 20 } });
     if (!saveData()) { err.textContent = "保存失败：浏览器不允许写入本地存储"; data = null; return; }
     setPin(pin);
     setAdmin(true);
@@ -1200,14 +1288,15 @@ function renderNav() {
   const items = NAV.filter(item => item.id !== "log" || isAdmin()).map(item => {
     const current = ui.view === item.id ? ' aria-current="page"' : "";
     const text = '<span class="nl-short">' + item.label + '</span><span class="nl-long">' + item.labelLong + '</span>';
-    return '<button type="button" class="nav-item" data-nav="' + item.id + '"' + current + ">" + item.icon + "<span>" + text + "</span></button>";
+    return '<button type="button" class="nav-item" data-nav="' + item.id + '" title="' + esc(item.labelLong) +
+      '" aria-label="' + esc(item.labelLong) + '"' + current + ">" + item.icon + "<span>" + text + "</span></button>";
   }).join("");
   document.getElementById("sidebarNav").innerHTML = items;
   document.getElementById("topnav").innerHTML = items;
   document.getElementById("tabbar").innerHTML = items;
   document.getElementById("modePill").innerHTML = isAdmin()
-    ? '<span class="dot dot-blue"></span>管理员模式'
-    : '<span class="dot"></span>只读模式';
+    ? '<span class="dot dot-blue"></span><span class="mp-text">管理员模式</span>'
+    : '<span class="dot"></span><span class="mp-text">只读模式</span>';
 }
 function sourceBanner() {
   if (isAdmin() || !data.source) return "";
@@ -1241,8 +1330,8 @@ function render() {
 function kpiHTML() {
   const k = kpis();
   const items = [
-    ["在账备件", "项", k.parts],
-    ["在账库房", "个", k.warehouses],
+    ["在账物品", "项", k.items],
+    ["在账工具", "项", k.tools],
     ["本月入库", "笔", k.inMonth],
     ["本月出库", "笔", k.outMonth]
   ];
@@ -1256,41 +1345,49 @@ function statusBadge(qty) {
 }
 function whOptionsHTML() {
   return '<option value="">全部库房</option>' + sortedWarehouses().map(w =>
-    '<option value="' + esc(w.id) + '"' + (ui.wh === w.id ? " selected" : "") + ">" + esc(w.no) + " · " + esc(w.name) + "</option>"
+    '<option value="' + esc(w.id) + '"' + (ui.wh === w.id ? " selected" : "") + ">" + esc(w.name) + "</option>"
   ).join("");
 }
-function catOptionsHTML() {
-  return '<option value="">全部分类</option>' + categories().map(c =>
-    '<option value="' + esc(c) + '"' + (ui.cat === c ? " selected" : "") + ">" + esc(c) + "</option>"
+function typeOptionsHTML() {
+  return '<option value="">全部类别</option>' + PART_TYPES.map(t =>
+    '<option value="' + t.id + '"' + (ui.type === t.id ? " selected" : "") + ">" + t.label + "</option>"
+  ).join("");
+}
+function areaOptionsHTML() {
+  return '<option value="">全部区域</option>' + areas().map(a =>
+    '<option value="' + esc(a) + '"' + (ui.area === a ? " selected" : "") + ">" + esc(a) + "</option>"
   ).join("");
 }
 function activeFiltersHTML() {
   const chips = [];
   if (ui.q.trim()) chips.push('<span class="chip">关键词：' + esc(ui.q.trim()) + "</span>");
   if (ui.wh) chips.push('<span class="chip">库房：' + esc(warehouseLabel(ui.wh)) + "</span>");
-  if (ui.cat) chips.push('<span class="chip">分类：' + esc(ui.cat) + "</span>");
+  if (ui.type) chips.push('<span class="chip">类别：' + esc(typeLabel(ui.type)) + "</span>");
+  if (ui.area) chips.push('<span class="chip">区域：' + esc(ui.area) + "</span>");
   if (!chips.length) return "";
   return '<div class="chips">' + chips.join("") + '<button type="button" class="chip-clear" data-act="clearFilters">清空筛选</button></div>';
 }
 function ledgerListHTML() {
   const list = filteredParts();
   if (data.parts.length === 0) {
-    return '<div class="empty"><p>还没有备件台账。先建库房，再逐个建备件。</p>' +
+    return '<div class="empty"><p>还没有台账。先建库房，再逐个建物品或工具。</p>' +
       (isAdmin() ? "" : '<button type="button" class="btn btn-secondary" data-act="importPkg">导入共享包</button>') +
       "</div>";
   }
   if (list.length === 0) {
-    return '<div class="empty"><p>没有符合当前条件的备件。</p><button type="button" class="btn btn-secondary" data-act="clearFilters">清空筛选</button></div>';
+    return '<div class="empty"><p>没有符合当前条件的台账项。</p><button type="button" class="btn btn-secondary" data-act="clearFilters">清空筛选</button></div>';
   }
   const rows = list.map(p => {
     const w = warehouseById(p.warehouseId);
     const attrs = ' data-act="openPart" data-id="' + esc(p.id) + '" tabindex="0" role="button"';
-    const model = p.model ? '<span class="cell-sub">' + esc(p.model) + "</span>" : '<span class="cell-sub">—</span>';
+    const sub = [typeLabel(p.type), p.model || "无规格"].join(" · ");
     return '<tr' + attrs + ">" +
-      '<td><span class="cell-main">' + esc(p.name) + "</span> " + model + "</td>" +
-      "<td>" + esc(p.category || "—") + "</td>" +
+      '<td><span class="cell-main">' + esc(p.name) + '</span><span class="cell-sub"> ' + esc(sub) + "</span></td>" +
+      "<td>" + esc(p.maker || "—") + "</td>" +
       '<td class="num"><span class="qty">' + n(p.qty) + '</span><span class="unit">' + esc(p.unit) + "</span></td>" +
-      "<td>" + esc(w ? w.no : "—") + (w ? '<span class="cell-sub"> ' + esc(w.name) + "</span>" : "") + "</td>" +
+      "<td>" + esc(w ? w.name : "—") + "</td>" +
+      "<td>" + esc(p.area || "—") + "</td>" +
+      "<td>" + esc(p.loc || "—") + "</td>" +
       "<td>" + statusBadge(p.qty) + "</td>" +
       '<td title="' + esc(p.note) + '">' + esc(p.note || "—") + "</td>" +
       "</tr>";
@@ -1299,12 +1396,13 @@ function ledgerListHTML() {
   const cards = list.map(p => {
     const w = warehouseById(p.warehouseId);
     const attrs = ' data-act="openPart" data-id="' + esc(p.id) + '" role="button" tabindex="0"';
-    const sub = [p.model || "无型号", w ? w.no + " · " + w.name : "库房已删除", p.category || "未分类"].join(" · ");
+    const sub = [typeLabel(p.type), p.maker || "无厂家", p.model || "无规格"].join(" · ");
+    const place = [w ? w.name + (w.loc ? " " + w.loc : "") : "库房已删除", p.area, p.loc].filter(Boolean).join(" · ");
     return '<div class="mcard"' + attrs + ">" +
       '<div class="mcard-main">' +
         '<div class="mcard-title">' + esc(p.name) + "</div>" +
         '<div class="mcard-sub">' + esc(sub) + "</div>" +
-        (p.note ? '<div class="mcard-note">' + esc(p.note) + "</div>" : "") +
+        '<div class="mcard-note">' + esc(place) + "</div>" +
       "</div>" +
       '<div class="mcard-side">' +
         '<div class="mcard-qty">' + n(p.qty) + '<span class="unit">' + esc(p.unit) + "</span></div>" +
@@ -1315,8 +1413,8 @@ function ledgerListHTML() {
 
   return '<div class="mlist">' + cards + "</div>" +
     '<div class="card table-card"><table class="table">' +
-      "<colgroup><col style=\"width:28%\"><col style=\"width:12%\"><col style=\"width:12%\"><col style=\"width:18%\"><col style=\"width:10%\"><col style=\"width:20%\"></colgroup>" +
-      "<thead><tr><th scope=\"col\">备件 / 品牌型号</th><th scope=\"col\">分类</th><th scope=\"col\" class=\"num\">数量</th><th scope=\"col\">库房</th><th scope=\"col\">状态</th><th scope=\"col\">备注</th></tr></thead>" +
+      "<colgroup><col style=\"width:20%\"><col style=\"width:12%\"><col style=\"width:9%\"><col style=\"width:13%\"><col style=\"width:10%\"><col style=\"width:12%\"><col style=\"width:10%\"><col style=\"width:14%\"></colgroup>" +
+      "<thead><tr><th scope=\"col\">名称 / 规格</th><th scope=\"col\">厂家</th><th scope=\"col\" class=\"num\">数量</th><th scope=\"col\">库房</th><th scope=\"col\">区域</th><th scope=\"col\">位置</th><th scope=\"col\">状态</th><th scope=\"col\">备注</th></tr></thead>" +
       "<tbody>" + rows + "</tbody></table></div>";
 }
 function ledgerBodyHTML() {
@@ -1329,23 +1427,25 @@ function updateLedgerBody() {
 }
 function viewLedger() {
   const total = data.parts.length;
+  const k = kpis();
   const actions =
     (total ? '<button type="button" class="btn btn-secondary btn-sm" data-act="exportLedger">导出 CSV</button>' : "") +
-    (isAdmin() ? '<button type="button" class="btn btn-primary" data-act="addPart">新增备件</button>' : "");
+    (isAdmin() ? '<button type="button" class="btn btn-primary" data-act="addPart">新增物品 / 工具</button>' : "");
   return sourceBanner() +
     '<section class="page">' +
       '<header class="page-head">' +
-        '<div class="page-title"><h1>台账</h1><p class="sub">' +
-          (total ? "共 " + n(total) + " 项备件，按库房号排序" : "库房与备件建账入口") +
+        '<div class="page-title"><h1>' + viewTitle("ledger") + "</h1><p class=\"sub\">" +
+          (total ? "共 " + n(total) + " 项（物品 " + n(k.items) + " · 工具 " + n(k.tools) + "）" : "库房与物品/工具建账入口") +
         "</p></div>" +
         (actions ? '<div class="page-actions">' + actions + "</div>" : "") +
       "</header>" +
       '<section class="kpis" aria-label="关键指标">' + kpiHTML() + "</section>" +
       '<div class="toolbar">' +
         '<div class="search-wrap"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="m13.5 13.5 3 3" stroke-linecap="round"/></svg>' +
-        '<input id="q" class="input search" type="search" value="' + esc(ui.q) + '" placeholder="搜索名称、型号、库房、备注" aria-label="搜索备件"></div>' +
+        '<input id="q" class="input search" type="search" value="' + esc(ui.q) + '" placeholder="搜索名称、厂家、规格、区域、位置" aria-label="搜索台账"></div>' +
         '<div class="select-wrap"><select id="filterWh" class="input" aria-label="按库房筛选">' + whOptionsHTML() + "</select></div>" +
-        '<div class="select-wrap"><select id="filterCat" class="input" aria-label="按分类筛选">' + catOptionsHTML() + "</select></div>" +
+        '<div class="select-wrap"><select id="filterType" class="input" aria-label="按类别筛选">' + typeOptionsHTML() + "</select></div>" +
+        '<div class="select-wrap"><select id="filterArea" class="input" aria-label="按库房区域筛选">' + areaOptionsHTML() + "</select></div>" +
       "</div>" +
       '<div id="ledgerBody">' + ledgerBodyHTML() + "</div>" +
     "</section>";
@@ -1360,12 +1460,12 @@ function partOptionsHTML(selectedId) {
     const w = warehouseById(p.warehouseId);
     const key = w ? w.id : "__missing";
     let g = groups.find(x => x.key === key);
-    if (!g) { g = { key, label: w ? w.no + " · " + w.name : "库房已删除", items: [] }; groups.push(g); }
+    if (!g) { g = { key, label: w ? w.name + (w.loc ? " · " + w.loc : "") : "库房已删除", items: [] }; groups.push(g); }
     g.items.push(p);
   });
   return groups.map(g => '<optgroup label="' + esc(g.label) + '">' +
     g.items.map(p => '<option value="' + esc(p.id) + '"' + (p.id === selectedId ? " selected" : "") + ">" +
-      esc(p.name) + (p.model ? " · " + esc(p.model) : "") + "</option>").join("") +
+      esc(p.name) + (p.model ? " · " + esc(p.model) : "") + "（" + typeLabel(p.type) + "）</option>").join("") +
     "</optgroup>").join("");
 }
 function stockLineHTML(part, qty, type) {
@@ -1375,8 +1475,9 @@ function stockLineHTML(part, qty, type) {
   const out = type === "out";
   const after = out ? part.qty - q : part.qty + q;
   const over = out && q > part.qty;
+  const place = [part.area, part.loc].filter(Boolean).join(" · ");
   return '<span>当前库存 <b>' + n(part.qty) + " " + esc(part.unit) + "</b></span>" +
-    "<span>" + esc(w ? w.no + " · " + w.name : "库房已删除") + "</span>" +
+    "<span>" + esc(w ? w.name : "库房已删除") + (place ? " · " + esc(place) : "") + "</span>" +
     (q > 0
       ? '<span class="' + (over ? "stock-over" : "") + '">' + (out ? "出库后 " : "入库后 ") +
         "<b>" + n(after) + " " + esc(part.unit) + "</b></span>"
@@ -1384,10 +1485,10 @@ function stockLineHTML(part, qty, type) {
 }
 function viewLog() {
   const head =
-    '<header class="page-head"><div class="page-title"><h1>登记</h1><p class="sub">现场登记，提交后台账与明细同时更新</p></div></header>';
+    '<header class="page-head"><div class="page-title"><h1>' + viewTitle("log") + '</h1><p class="sub">现场登记，提交后台账与明细同时更新</p></div></header>';
   if (!data.parts.length) {
     return '<section class="page">' + head +
-      '<div class="empty"><p>还没有可登记的备件。先建库房，再逐个建备件。</p>' +
+      '<div class="empty"><p>还没有可登记的台账项。先建库房，再建物品或工具。</p>' +
       '<button type="button" class="btn btn-secondary" data-act="goLedger">去建台账</button></div></section>';
   }
   if (!partById(ui.regPart)) ui.regPart = sortedParts()[0].id;
@@ -1397,11 +1498,11 @@ function viewLog() {
 
   return '<section class="page">' + head +
     '<form id="logForm" class="card log-form" novalidate autocomplete="off">' +
-      '<div class="field"><label for="logPart">备件</label>' +
+      '<div class="field"><label for="logPart">物品 / 工具</label>' +
         '<div class="select-wrap"><select class="input" id="logPart">' + partOptionsHTML(part.id) + "</select></div>" +
         '<div class="stock-line" id="logStockLine">' + stockLineHTML(part, "", type) + "</div>" +
       "</div>" +
-      '<div class="field"><label id="logTypeLabel">类型</label>' +
+      '<div class="field"><label id="logTypeLabel">出入库</label>' +
         '<div class="seg" role="radiogroup" aria-labelledby="logTypeLabel">' +
           '<label><input type="radio" name="logType" value="in"' + (type !== "out" ? " checked" : "") + "><span>入库</span></label>" +
           '<label><input type="radio" name="logType" value="out"' + (type === "out" ? " checked" : "") + "><span>出库</span></label>" +
@@ -1415,8 +1516,11 @@ function viewLog() {
       "</div>" +
       '<div class="grid2">' +
         '<div class="field"><label for="logDate">日期</label><input class="input" id="logDate" type="date" value="' + today() + '"></div>' +
-        '<div class="field"><label for="logNote">备注</label><input class="input" id="logNote" maxlength="60" placeholder="去向、领用人、单据"></div>' +
+        '<div class="field"><label for="logReason">事由</label>' +
+          '<input class="input" id="logReason" maxlength="40" placeholder="领用、报修、采购入库"></div>' +
       "</div>" +
+      '<div class="field"><label for="logNote">备注</label>' +
+        '<input class="input" id="logNote" maxlength="60" placeholder="选填：单据号、补充说明"></div>' +
       '<div class="form-error" id="logError" role="alert"></div>' +
       '<div class="card-foot"><button type="submit" class="btn btn-primary submit-dock" id="logSubmit">' +
         (type === "out" ? "确认出库" : "确认入库") + "</button></div>" +
@@ -1470,9 +1574,11 @@ function bindLogForm(form) {
         qty: form.querySelector("#logQty").value,
         operator: form.querySelector("#logOperator").value,
         date: form.querySelector("#logDate").value,
+        reason: form.querySelector("#logReason").value,
         note: form.querySelector("#logNote").value
       });
       form.querySelector("#logQty").value = "";
+      form.querySelector("#logReason").value = "";
       form.querySelector("#logNote").value = "";
       updateLogStockLine(form);
       toast((log.type === "in" ? "已入库 " : "已出库 ") + n(log.qty) + " " + log.part.unit + "，结存 " + n(log.balance) + " " + log.part.unit);
@@ -1492,8 +1598,21 @@ function mountView() {
 function logWarehouseId(log) {
   const p = partById(log.partId);
   if (p) return p.warehouseId;
-  const w = data.warehouses.find(x => x.no === log.part.warehouseNo);
+  const name = log.part.warehouseName || "";
+  const w = name ? data.warehouses.find(x => x.name === name) : null;
   return w ? w.id : "";
+}
+function logWarehouseName(log) {
+  const p = partById(log.partId);
+  if (p) {
+    const w = warehouseById(p.warehouseId);
+    return w ? w.name : "";
+  }
+  return log.part.warehouseName || "";
+}
+function logLoc(log) {
+  const p = partById(log.partId);
+  return p ? p.loc : (log.part.loc || "");
 }
 function filteredLogs() {
   const q = ui.logQ.trim().toLowerCase();
@@ -1504,10 +1623,9 @@ function filteredLogs() {
     if (ui.logFrom && String(l.date) < ui.logFrom) return false;
     if (ui.logTo && String(l.date) > ui.logTo) return false;
     if (!q) return true;
-    const wh = logWarehouseId(l);
     const hay = [
-      logTitle(l), logModel(l), l.operator, l.note,
-      l.part.warehouseNo, wh ? warehouseLabel(wh) : "",
+      logTitle(l), logMaker(l), logModel(l), l.reason, l.operator, l.note,
+      logWarehouseName(l), logLoc(l), typeLabel(logTypeOf(l)),
       l.type === "in" ? "入库" : "出库"
     ].join(" ").toLowerCase();
     return hay.indexOf(q) >= 0;
@@ -1518,14 +1636,14 @@ function logsPageSize() {
 }
 function logWhOptionsHTML() {
   return '<option value="">全部库房</option>' + sortedWarehouses().map(w =>
-    '<option value="' + esc(w.id) + '"' + (ui.logWh === w.id ? " selected" : "") + ">" + esc(w.no) + " · " + esc(w.name) + "</option>"
+    '<option value="' + esc(w.id) + '"' + (ui.logWh === w.id ? " selected" : "") + ">" + esc(w.name) + "</option>"
   ).join("");
 }
 function activeLogFiltersHTML() {
   const chips = [];
-  if (ui.logPart) chips.push("备件：" + partFilterLabel());
+  if (ui.logPart) chips.push("台账项：" + partFilterLabel());
   if (ui.logQ.trim()) chips.push("关键词：" + ui.logQ.trim());
-  if (ui.logType) chips.push("类型：" + (ui.logType === "in" ? "入库" : "出库"));
+  if (ui.logType) chips.push("出入库：" + (ui.logType === "in" ? "入库" : "出库"));
   if (ui.logWh) chips.push("库房：" + warehouseLabel(ui.logWh));
   if (ui.logFrom || ui.logTo) chips.push("日期：" + (ui.logFrom || "最早") + " 至 " + (ui.logTo || "最近"));
   if (!chips.length) return "";
@@ -1556,15 +1674,17 @@ function logsBodyHTML() {
         : reversed.has(l.id) ? '<span class="cell-sub">已冲正</span>'
         : !partById(l.partId) ? '<span class="cell-sub">已删除</span>'
         : '<button type="button" class="btn btn-ghost btn-sm" data-act="reverseLog" data-id="' + esc(l.id) + '">冲正</button>') + "</td>";
+    const why = [l.reason, l.note].filter(Boolean).join(" · ");
     return "<tr>" +
       '<td title="' + esc(logTimeText(l, true)) + '">' + esc(logTimeText(l)) + "</td>" +
       "<td>" + type + "</td>" +
       "<td>" + esc(logTitle(l)) + (logModel(l) ? '<span class="cell-sub"> ' + esc(logModel(l)) + "</span>" : "") + "</td>" +
+      "<td>" + esc(logMaker(l) || "—") + "</td>" +
       '<td class="num"><span class="qty">' + (l.type === "in" ? "+" : "−") + n(l.qty) + "</span>" + (l.part.unit ? '<span class="unit">' + esc(l.part.unit) + "</span>" : "") + "</td>" +
       '<td class="num">' + n(l.balance) + "</td>" +
+      '<td title="' + esc(why) + '">' + esc(l.reason || "—") + (l.note ? '<span class="cell-sub"> ' + esc(l.note) + "</span>" : "") + "</td>" +
       "<td>" + esc(l.operator || "—") + "</td>" +
-      "<td>" + esc(l.part.warehouseNo || "—") + "</td>" +
-      '<td title="' + esc(l.note) + '">' + esc(l.note || "—") + "</td>" +
+      "<td>" + esc(logWarehouseName(l) || "—") + "</td>" +
       action +
       "</tr>";
   }).join("");
@@ -1575,11 +1695,15 @@ function logsBodyHTML() {
       reversed.has(l.id) ? '<span class="mcard-flag">已冲正</span>'
         : !partById(l.partId) ? ""
         : '<button type="button" class="mcard-act" data-act="reverseLog" data-id="' + esc(l.id) + '">冲正</button>';
+    const spec = [logMaker(l), logModel(l)].filter(Boolean).join(" · ");
+    const where = [logTimeText(l), l.operator || "—", logWarehouseName(l) || "库房已删除"].filter(Boolean).join(" · ");
+    const why = l.reason || "未填事由";
     return '<div class="mcard">' +
       '<div class="mcard-main">' +
-        '<div class="mcard-title">' + esc(logTitle(l)) + "</div>" +
-        '<div class="mcard-sub">' + esc(logTimeText(l)) + " · " + esc(l.operator || "—") + (l.part.warehouseNo ? " · " + esc(l.part.warehouseNo) : "") + "</div>" +
-        (l.note ? '<div class="mcard-note">' + esc(l.note) + "</div>" : "") +
+        '<div class="mcard-title">' + esc(logTitle(l)) + '<span class="mcard-flag">' + typeLabel(logTypeOf(l)) + "</span></div>" +
+        '<div class="mcard-sub">' + esc(spec || "无厂家 / 规格") + "</div>" +
+        '<div class="mcard-note">' + esc(where) + "</div>" +
+        '<div class="mcard-note">' + esc(why + (l.note ? " · " + l.note : "")) + "</div>" +
       "</div>" +
       '<div class="mcard-side">' +
         '<div class="mcard-qty">' + (l.type === "in" ? "+" : "−") + n(l.qty) + '<span class="unit">' + esc(l.part.unit || "") + "</span></div>" +
@@ -1590,8 +1714,8 @@ function logsBodyHTML() {
   }).join("");
 
   const colgroup = admin
-    ? "<colgroup><col style=\"width:14%\"><col style=\"width:7%\"><col style=\"width:20%\"><col style=\"width:8%\"><col style=\"width:8%\"><col style=\"width:11%\"><col style=\"width:12%\"><col style=\"width:12%\"><col style=\"width:8%\"></colgroup>"
-    : "<colgroup><col style=\"width:15%\"><col style=\"width:8%\"><col style=\"width:21%\"><col style=\"width:9%\"><col style=\"width:9%\"><col style=\"width:12%\"><col style=\"width:13%\"><col style=\"width:13%\"></colgroup>";
+    ? "<colgroup><col style=\"width:12%\"><col style=\"width:8%\"><col style=\"width:18%\"><col style=\"width:10%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:14%\"><col style=\"width:8%\"><col style=\"width:8%\"><col style=\"width:8%\"></colgroup>"
+    : "<colgroup><col style=\"width:13%\"><col style=\"width:8%\"><col style=\"width:19%\"><col style=\"width:11%\"><col style=\"width:8%\"><col style=\"width:8%\"><col style=\"width:15%\"><col style=\"width:9%\"><col style=\"width:9%\"></colgroup>";
 
   const rest = all.length - shown.length;
 
@@ -1600,7 +1724,7 @@ function logsBodyHTML() {
     '<div class="mlist">' + cards + "</div>" +
     '<div class="card table-card"><table class="table">' +
       colgroup +
-      "<thead><tr><th scope=\"col\">时间</th><th scope=\"col\">类型</th><th scope=\"col\">备件</th><th scope=\"col\" class=\"num\">数量</th><th scope=\"col\" class=\"num\">结存</th><th scope=\"col\">经办人</th><th scope=\"col\">库房</th><th scope=\"col\">备注</th>" +
+      "<thead><tr><th scope=\"col\">时间</th><th scope=\"col\">出入库</th><th scope=\"col\">名称 / 规格</th><th scope=\"col\">厂家</th><th scope=\"col\" class=\"num\">数量</th><th scope=\"col\" class=\"num\">结存</th><th scope=\"col\">事由 / 备注</th><th scope=\"col\">经办人</th><th scope=\"col\">库房</th>" +
       (admin ? "<th scope=\"col\">操作</th>" : "") + "</tr></thead>" +
       "<tbody>" + rows + "</tbody></table></div>" +
     (rest > 0 ? '<div class="list-more"><button type="button" class="btn btn-secondary" data-act="moreLogs">加载更多（还有 ' + n(rest) + " 笔）</button></div>" : "");
@@ -1612,7 +1736,7 @@ function updateLogsBody() {
 function viewLogs() {
   const total = data.logs.length;
   const head =
-    '<header class="page-head"><div class="page-title"><h1>明细</h1><p class="sub">' +
+    '<header class="page-head"><div class="page-title"><h1>' + viewTitle("logs") + '</h1><p class="sub">' +
     (total ? "共 " + n(total) + " 笔出入库记录" : "出入库记录") +
     "</p></div>" +
     (total ? '<div class="page-actions"><button type="button" class="btn btn-secondary btn-sm" data-act="exportLogs">导出 CSV</button></div>' : "") +
@@ -1620,7 +1744,7 @@ function viewLogs() {
 
   if (!total) {
     return sourceBanner() + '<section class="page">' + head +
-      '<div class="empty"><p>还没有出入库记录。新增备件时填了初始数量，会自动生成一笔「期初建账」入库。</p>' +
+      '<div class="empty"><p>还没有出入库记录。新增物品或工具时填了初始数量，会自动生成一笔「期初建账」入库。</p>' +
       '<button type="button" class="btn btn-secondary" data-act="goLedger">回到台账</button></div></section>';
   }
 
@@ -1628,7 +1752,7 @@ function viewLogs() {
 
   const toolbar = '<div class="toolbar">' +
     '<div class="search-wrap"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="m13.5 13.5 3 3" stroke-linecap="round"/></svg>' +
-    '<input id="logQ" class="input search" type="search" value="' + esc(ui.logQ) + '" placeholder="搜索备件、经办人、备注" aria-label="搜索出入库记录"></div>' +
+    '<input id="logQ" class="input search" type="search" value="' + esc(ui.logQ) + '" placeholder="搜索名称、厂家、事由、经办人" aria-label="搜索出入库记录"></div>' +
     '<div class="select-wrap"><select id="logFilterType" class="input" aria-label="按类型筛选">' +
       '<option value="">全部类型</option>' +
       '<option value="in"' + (ui.logType === "in" ? " selected" : "") + ">入库</option>" +
@@ -1677,8 +1801,8 @@ function viewSettings() {
     ? whs.map(w => {
         const count = data.parts.filter(p => p.warehouseId === w.id).length;
         return '<div class="row"><div class="row-main">' +
-          '<div class="row-title">' + esc(w.no) + " · " + esc(w.name) + "</div>" +
-          '<div class="row-sub">' + (w.manager ? "管理员 " + esc(w.manager) : "未填管理员") + (w.phone ? " · " + esc(w.phone) : "") + " · " + count + " 项备件" + "</div>" +
+          '<div class="row-title">' + esc(w.name) + "</div>" +
+          '<div class="row-sub">' + (w.loc ? "库位 " + esc(w.loc) : "未填库位") + " · " + (w.manager ? "管理员 " + esc(w.manager) : "未填管理员") + " · " + count + " 项台账" + "</div>" +
           (w.note ? '<div class="row-note">' + esc(w.note) + "</div>" : "") +
         "</div>" +
         (admin ? '<div class="row-actions">' +
@@ -1688,13 +1812,13 @@ function viewSettings() {
         "</div>";
       }).join("")
     : '<div class="empty" style="border:0;background:none;padding:20px 0"><p>' +
-      (admin ? "还没有库房。建一个库房，才能往里建备件。" : "本机没有库房数据。") + "</p></div>";
+      (admin ? "还没有库房。建一个库房，才能往里建物品或工具。" : "本机没有库房数据。") + "</p></div>";
 
   const src = data.source;
   const bak = hashExists();
 
   return '<section class="page">' +
-      '<header class="page-head"><div class="page-title"><h1>设置</h1><p class="sub">动力二组库房管理系统 · 数据只存本机</p></div></header>' +
+      '<header class="page-head"><div class="page-title"><h1>' + viewTitle("settings") + '</h1><p class="sub">动力二组库房管理系统 · 数据只存本机</p></div></header>' +
 
       '<section class="card"><h2 class="card-title">身份与权限</h2>' + modeRow + pinRow + "</section>" +
 
@@ -1729,14 +1853,14 @@ function viewSettings() {
 const views = { ledger: viewLedger, log: viewLog, logs: viewLogs, settings: viewSettings };
 
 /* =========================================================
-   弹层：备件详情
+   弹层：物品 / 工具详情
    ========================================================= */
 function partFilterLabel() {
   const p = partById(ui.logPart);
   if (p) return p.name + (p.model ? " " + p.model : "");
   const l = data.logs.find(x => x.partId === ui.logPart);
-  if (!l) return "已删除备件";
-  return (l.part.name || "已删除备件") + (l.part.model ? " " + l.part.model : "");
+  if (!l) return "已删除台账项";
+  return (l.part.name || "已删除台账项") + (l.part.model ? " " + l.part.model : "");
 }
 function showPartLogs(partId) {
   ui.logQ = ""; ui.logType = ""; ui.logWh = ""; ui.logFrom = ""; ui.logTo = "";
@@ -1753,28 +1877,37 @@ function partRecentLogsHTML(part) {
     const type = l.type === "in" ? '<span class="badge info">入库</span>' : '<span class="badge mute">出库</span>';
     const unit = l.part.unit ? " " + esc(l.part.unit) : "";
     const time = l.createdAt ? shortStamp(l.createdAt) : (l.date || "—");
+    const detail = [l.reason, l.note].filter(Boolean).join(" · ");
     return '<div class="dlog">' +
       '<div class="dlog-top"><span>' + type + ' <span class="qty">' + (l.type === "in" ? "+" : "−") + n(l.qty) + unit + "</span></span>" +
         '<span class="cell-sub">' + esc(time) + "</span></div>" +
       '<div class="dlog-sub">' + esc(l.operator || "—") + " · 结存 " + n(l.balance) + unit + "</div>" +
-      (l.note ? '<div class="dlog-note">' + esc(l.note) + "</div>" : "") +
+      (detail ? '<div class="dlog-note">' + esc(detail) + "</div>" : "") +
       "</div>";
   }).join("");
 }
 function openPartDetail(id) {
   const part = partById(id);
-  if (!part) return toast("备件已不存在", "error");
+  if (!part) return toast("台账项已不存在", "error");
   const w = warehouseById(part.warehouseId);
   const total = data.logs.filter(l => l.partId === part.id).length;
+  const label = typeLabel(part.type);
   const body =
     '<div class="detail-hero">' +
       '<div><div class="detail-name">' + esc(part.name) + "</div>" +
-        '<div class="detail-sub">' + esc(part.model || "无型号") + " · " + esc(part.category || "未分类") + "</div></div>" +
+        '<div class="detail-sub">' + esc([label, part.maker, part.model].filter(Boolean).join(" · ") || label) + "</div></div>" +
       '<div class="detail-side"><div class="detail-qty">' + n(part.qty) + '<span class="unit">' + esc(part.unit) + "</span></div>" + statusBadge(part.qty) + "</div>" +
     "</div>" +
     '<div class="detail-rows">' +
-      '<div class="drow"><span class="drow-label">库房</span><span class="drow-value">' + esc(w ? w.no + " · " + w.name : "库房已删除") + "</span></div>" +
-      '<div class="drow"><span class="drow-label">分类</span><span class="drow-value">' + esc(part.category || "—") + "</span></div>" +
+      '<div class="drow"><span class="drow-label">库房</span><span class="drow-value">' +
+        esc(w ? w.name + (w.loc ? " · " + w.loc : "") : "库房已删除") + "</span></div>" +
+      '<div class="drow"><span class="drow-label">库房区域</span><span class="drow-value">' + esc(part.area || "—") + "</span></div>" +
+      '<div class="drow"><span class="drow-label">' + esc(label) + '位置</span><span class="drow-value">' + esc(part.loc || "—") + "</span></div>" +
+      (part.type === "tool"
+        ? '<div class="drow"><span class="drow-label">保管维护人</span><span class="drow-value">' + esc(part.keeper || "—") + "</span></div>"
+        : "") +
+      '<div class="drow"><span class="drow-label">厂家</span><span class="drow-value">' + esc(part.maker || "—") + "</span></div>" +
+      '<div class="drow"><span class="drow-label">规格/型号</span><span class="drow-value">' + esc(part.model || "—") + "</span></div>" +
       '<div class="drow"><span class="drow-label">单位</span><span class="drow-value">' + esc(part.unit) + "</span></div>" +
       '<div class="drow"><span class="drow-label">备注</span><span class="drow-value">' + esc(part.note || "—") + "</span></div>" +
     "</div>" +
@@ -1787,7 +1920,7 @@ function openPartDetail(id) {
   if (isAdmin()) {
     actions.push({ label: "编辑", kind: "primary", onClick: () => { setTimeout(() => openPartDialog(part.id), 0); } });
   }
-  openModal({ title: "备件详情", drawer: true, body, actions });
+  openModal({ title: label + "详情", drawer: true, body, actions });
 }
 
 /* =========================================================
@@ -1799,13 +1932,10 @@ function openWarehouseDialog(id) {
   const body =
     '<form id="whForm" novalidate>' +
       '<div class="grid2">' +
-        '<div class="field"><label for="whNo">库房号</label><input class="input" id="whNo" maxlength="10" value="' + esc(w ? w.no : "") + '"></div>' +
-        '<div class="field"><label for="whName">库房名称</label><input class="input" id="whName" maxlength="20" value="' + esc(w ? w.name : "") + '"></div>' +
+        '<div class="field"><label for="whName">库房名</label><input class="input" id="whName" maxlength="20" value="' + esc(w ? w.name : "") + '"></div>' +
+        '<div class="field"><label for="whLoc">库位</label><input class="input" id="whLoc" maxlength="30" value="' + esc(w ? w.loc : "") + '" placeholder="如 A 区 3 号房"></div>' +
       "</div>" +
-      '<div class="grid2">' +
-        '<div class="field"><label for="whManager">管理员</label><input class="input" id="whManager" maxlength="20" value="' + esc(w ? w.manager : "") + '"></div>' +
-        '<div class="field"><label for="whPhone">联系方式</label><input class="input" id="whPhone" type="tel" maxlength="20" value="' + esc(w ? w.phone : "") + '"></div>' +
-      "</div>" +
+      '<div class="field"><label for="whManager">管理员</label><input class="input" id="whManager" maxlength="20" value="' + esc(w ? w.manager : "") + '"></div>' +
       '<div class="field"><label for="whNote">备注</label><textarea class="input" id="whNote" maxlength="120">' + esc(w ? w.note : "") + "</textarea></div>" +
       '<div class="form-error" role="alert"></div>' +
     "</form>";
@@ -1815,10 +1945,9 @@ function openWarehouseDialog(id) {
     err.textContent = "";
     try {
       const payload = {
-        no: document.getElementById("whNo").value,
         name: document.getElementById("whName").value,
+        loc: document.getElementById("whLoc").value,
         manager: document.getElementById("whManager").value,
-        phone: document.getElementById("whPhone").value,
         note: document.getElementById("whNote").value
       };
       if (w) updateWarehouse(w.id, payload); else addWarehouse(payload);
@@ -1846,43 +1975,55 @@ function openWarehouseDialog(id) {
 }
 
 /* =========================================================
-   弹层：备件
+   弹层：物品 / 工具
    ========================================================= */
 function openPartDialog(id) {
   if (!isAdmin()) return toast("当前是只读模式，不能修改数据", "error");
   const part = id ? partById(id) : null;
   if (!data.warehouses.length) {
-    toast("先新增一个库房，再建备件");
+    toast("先新增一个库房，再建物品或工具");
     openWarehouseDialog(null);
     return;
   }
   const whs = sortedWarehouses();
   const currentWh = part ? part.warehouseId : (ui.wh || whs[0].id);
   const isEdit = !!part;
+  const currentType = part ? partType(part.type) : (ui.type || "item");
 
-  const whOpts = whs.map(w => '<option value="' + esc(w.id) + '"' + (w.id === currentWh ? " selected" : "") + ">" + esc(w.no) + " · " + esc(w.name) + "</option>").join("");
-  const catOpts = categories().map(c => '<option value="' + esc(c) + '"></option>').join("");
+  const whOpts = whs.map(w => '<option value="' + esc(w.id) + '"' + (w.id === currentWh ? " selected" : "") + ">" + esc(w.name) + (w.loc ? " · " + esc(w.loc) : "") + "</option>").join("");
+  const areaOpts = areas().map(a => '<option value="' + esc(a) + '"></option>').join("");
   const unitOpts = units().map(u => '<option value="' + esc(u) + '"></option>').join("");
+  const typeSeg = '<div class="seg" role="radiogroup" aria-labelledby="pTypeLabel">' +
+    PART_TYPES.map(t => '<label><input type="radio" name="pType" value="' + t.id + '"' +
+      (currentType === t.id ? " checked" : "") + "><span>" + t.label + "</span></label>").join("") +
+    "</div>";
 
   const body =
     '<form id="partForm" novalidate>' +
-      '<div class="field"><label for="pName">备件名称</label><input class="input" id="pName" maxlength="40" value="' + esc(part ? part.name : "") + '"></div>' +
+      '<div class="field"><label id="pTypeLabel">类别</label>' + typeSeg + "</div>" +
       '<div class="grid2">' +
-        '<div class="field"><label for="pModel">品牌型号</label><input class="input" id="pModel" maxlength="40" value="' + esc(part ? part.model : "") + '"></div>' +
-        '<div class="field"><label for="pWh">所属库房</label><div class="select-wrap"><select class="input" id="pWh">' + whOpts + "</select></div></div>" +
+        '<div class="field"><label for="pName">名称</label><input class="input" id="pName" maxlength="40" value="' + esc(part ? part.name : "") + '"></div>' +
+        '<div class="field"><label for="pMaker">厂家</label><input class="input" id="pMaker" maxlength="30" value="' + esc(part ? part.maker : "") + '"></div>' +
       "</div>" +
       '<div class="grid2">' +
-        '<div class="field"><label for="pCat">分类</label><input class="input" id="pCat" list="catList" maxlength="20" value="' + esc(part ? part.category : "") + '"></div>' +
+        '<div class="field"><label for="pModel">规格/型号</label><input class="input" id="pModel" maxlength="40" value="' + esc(part ? part.model : "") + '"></div>' +
         '<div class="field"><label for="pUnit">单位</label><input class="input" id="pUnit" list="unitList" maxlength="6" value="' + esc(part ? part.unit : "个") + '"></div>' +
       "</div>" +
+      '<div class="field"><label for="pWh">所属库房</label><div class="select-wrap"><select class="input" id="pWh">' + whOpts + "</select></div></div>" +
+      '<div class="grid2">' +
+        '<div class="field"><label for="pArea">库房区域</label><input class="input" id="pArea" list="areaList" maxlength="20" value="' + esc(part ? part.area : "") + '" placeholder="如 电气区"></div>' +
+        '<div class="field"><label for="pLoc" id="pLocLabel">位置（库位）</label><input class="input" id="pLoc" maxlength="30" value="' + esc(part ? part.loc : "") + '" placeholder="如 3 号架 2 层"></div>' +
+      "</div>" +
+      '<div class="field" id="pKeeperField"' + (currentType === "tool" ? "" : " hidden") + '>' +
+        '<label for="pKeeper">保管维护人</label><input class="input" id="pKeeper" maxlength="20" value="' + esc(part ? part.keeper : "") + '"></div>' +
       (isEdit
         ? '<div class="field"><label>当前库存</label><div class="readonly-value">' + n(part.qty) + " " + esc(part.unit) + '</div><p class="hint">数量只能通过出入库变动，不能直接改。</p></div>'
         : '<div class="field"><label for="pQty">初始数量</label><input class="input" id="pQty" type="number" min="0" step="1" inputmode="numeric" value="0"><p class="hint">填大于 0 会自动生成一笔「期初建账」入库明细。</p></div>') +
-      '<div class="field"><label for="pNote">备注</label><textarea class="input" id="pNote" maxlength="120">' + esc(part ? part.note : "") + '</textarea><p class="hint">存放位置、货架、批次都写在这里。</p></div>' +
+      '<div class="field"><label for="pNote">备注</label><textarea class="input" id="pNote" maxlength="120">' + esc(part ? part.note : "") + '</textarea><p class="hint">批次、配套件、注意事项写在这里。</p></div>' +
       '<p class="hint" id="unitWarn" hidden>改单位后，历史明细仍显示旧单位。</p>' +
       '<div class="form-error" role="alert"></div>' +
-      (isEdit ? '<div class="modal-links"><button type="button" class="btn btn-text danger-text" id="deletePartBtn" style="height:32px;font-size:12px">删除这个备件</button></div>' : "") +
-      '<datalist id="catList">' + catOpts + "</datalist>" +
+      (isEdit ? '<div class="modal-links"><button type="button" class="btn btn-text danger-text" id="deletePartBtn" style="height:32px;font-size:12px">删除这个台账项</button></div>' : "") +
+      '<datalist id="areaList">' + areaOpts + "</datalist>" +
       '<datalist id="unitList">' + unitOpts + "</datalist>" +
     "</form>";
 
@@ -1890,18 +2031,23 @@ function openPartDialog(id) {
     const err = modalEl.querySelector(".form-error");
     err.textContent = "";
     try {
+      const checked = modalEl.querySelector('input[name="pType"]:checked');
       const payload = {
+        type: checked ? checked.value : currentType,
         name: document.getElementById("pName").value,
+        maker: document.getElementById("pMaker").value,
         model: document.getElementById("pModel").value,
         warehouseId: document.getElementById("pWh").value,
-        category: document.getElementById("pCat").value,
+        area: document.getElementById("pArea").value,
+        loc: document.getElementById("pLoc").value,
+        keeper: document.getElementById("pKeeper").value,
         unit: document.getElementById("pUnit").value,
         note: document.getElementById("pNote").value,
         qty: isEdit ? part.qty : document.getElementById("pQty").value
       };
       if (isEdit) updatePart(part.id, payload); else addPart(payload);
       render();
-      toast(isEdit ? "备件已更新" : "备件已新增");
+      toast(isEdit ? "台账项已更新" : typeLabel(payload.type) + "已新增");
       return false;
     } catch (ex) {
       err.textContent = ex.message;
@@ -1910,15 +2056,26 @@ function openPartDialog(id) {
   };
 
   openModal({
-    title: isEdit ? "编辑备件" : "新增备件",
+    title: isEdit ? "编辑物品 / 工具" : "新增物品 / 工具",
     body,
     actions: [
       { label: isEdit ? "放弃修改" : "返回", kind: "secondary" },
-      { label: isEdit ? "保存修改" : "保存备件", kind: "primary", onClick: submit }
+      { label: isEdit ? "保存修改" : "保存", kind: "primary", onClick: submit }
     ],
     onMount: modalEl => {
       const form = modalEl.querySelector("#partForm");
       form.addEventListener("submit", e => { e.preventDefault(); submit(modalEl); });
+      const syncType = () => {
+        const checked = modalEl.querySelector('input[name="pType"]:checked');
+        const isTool = !!checked && checked.value === "tool";
+        const field = modalEl.querySelector("#pKeeperField");
+        field.hidden = !isTool;
+        modalEl.querySelector("#pLocLabel").textContent = "位置（" + (isTool ? "工具" : "物品") + "库位）";
+      };
+      modalEl.querySelectorAll('input[name="pType"]').forEach(el => {
+        el.addEventListener("change", syncType);
+      });
+      syncType();
       if (isEdit) {
         const unitInput = modalEl.querySelector("#pUnit");
         const warn = modalEl.querySelector("#unitWarn");
@@ -1943,12 +2100,12 @@ function confirmDeletePart(part) {
     return toast("库存还有 " + part.qty + "，先出库到 0 再删除", "error");
   }
   openModal({
-    title: "删除备件",
+    title: "删除" + typeLabel(part.type),
     body: "<p>「" + esc(part.name) + "」删除后不再出现在台账里，历史出入库明细仍按快照保留。</p>",
     actions: [
-      { label: "保留备件", kind: "secondary" },
-      { label: "删除备件", kind: "danger", onClick: () => {
-        try { removePart(part.id); render(); toast("备件已删除"); }
+      { label: "保留", kind: "secondary" },
+      { label: "删除", kind: "danger", onClick: () => {
+        try { removePart(part.id); render(); toast(typeLabel(part.type) + "已删除"); }
         catch (ex) { toast(ex.message, "error"); return true; }
       } }
     ]
@@ -1958,7 +2115,7 @@ function confirmDeleteWarehouse(w) {
   if (!isAdmin()) return toast("当前是只读模式，不能修改数据", "error");
   openModal({
     title: "删除库房",
-    body: "<p>删除「" + esc(w.no) + " · " + esc(w.name) + "」后，库房信息从本机移除。库房里还有备件时不能删除。</p>",
+    body: "<p>删除「" + esc(w.name) + "」后，库房信息从本机移除。库房里还有台账项时不能删除。</p>",
     actions: [
       { label: "保留库房", kind: "secondary" },
       { label: "删除库房", kind: "danger", onClick: () => {
@@ -1993,7 +2150,7 @@ function confirmReverse(log) {
   openModal({
     title: "冲正记录",
     body: "<p>将「" + esc(logTitle(log)) + "」的" + esc(srcText) + "整笔冲销，生成一笔反向" + backText +
-      "记录，原记录保留不变，备注自动写「冲正 #原明细 id」。</p>" +
+      "记录，原记录保留不变，事由自动写「冲正 #原明细 id」。</p>" +
       '<p style="margin-bottom:0">冲正后库存 ' + n(after) + " " + esc(part.unit) + "。</p>",
     actions: [
       { label: "保留记录", kind: "secondary" },
@@ -2238,7 +2395,7 @@ const handlers = {
   editWarehouse: el => openWarehouseDialog(el.dataset.id),
   deleteWarehouse: el => { const w = warehouseById(el.dataset.id); if (w) confirmDeleteWarehouse(w); },
   reverseLog: el => { const l = data.logs.find(x => x.id === el.dataset.id); if (l) confirmReverse(l); },
-  clearFilters: () => { ui.q = ""; ui.wh = ""; ui.cat = ""; render(); const q = document.getElementById("q"); if (q) q.focus(); },
+  clearFilters: () => { ui.q = ""; ui.wh = ""; ui.type = ""; ui.area = ""; render(); const q = document.getElementById("q"); if (q) q.focus(); },
   clearLogFilters: () => {
     ui.logQ = ""; ui.logType = ""; ui.logWh = ""; ui.logFrom = ""; ui.logTo = ""; ui.logPart = "";
     ui.logLimit = logsPageSize();
@@ -2295,7 +2452,8 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("change", e => {
   if (e.target.id === "filterWh") { ui.wh = e.target.value; updateLedgerBody(); }
-  if (e.target.id === "filterCat") { ui.cat = e.target.value; updateLedgerBody(); }
+  if (e.target.id === "filterType") { ui.type = e.target.value; updateLedgerBody(); }
+  if (e.target.id === "filterArea") { ui.area = e.target.value; updateLedgerBody(); }
   if (e.target.id === "logFilterType") { ui.logType = e.target.value; ui.logLimit = logsPageSize(); updateLogsBody(); }
   if (e.target.id === "logFilterWh") { ui.logWh = e.target.value; ui.logLimit = logsPageSize(); updateLogsBody(); }
   if (e.target.id === "logFrom") { ui.logFrom = e.target.value; ui.logLimit = logsPageSize(); updateLogsBody(); }
