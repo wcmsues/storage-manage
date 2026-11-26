@@ -134,7 +134,7 @@
 - 图标用内联 SVG；manifest 引用的图标放同目录本地文件。
 - 页面标题、manifest name、PWA 名称统一用「动力二组库房管理系统」。
 - 升级保持文件名与路径不变，先导出共享包再替换；换电脑/换浏览器同样靠共享包迁移。
-- 当前目录还不是 Git 仓库；部署 Pages 前先建仓库并推送，**需用户明确指示**。
+- 仓库已建：`https://github.com/wcmsues/storage-manage`（`main` 分支，代码根目录即 Pages 根）。Pages 需仓库 Settings → Pages 选择「Deploy from a branch / main / (root)」后生效；再次推送**需用户明确指示**。
 
 ---
 
