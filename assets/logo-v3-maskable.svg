@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#48A0FF"/>
+      <stop offset="0.5" stop-color="#0A84FF"/>
+      <stop offset="1" stop-color="#0068DF"/>
+    </linearGradient>
+    <linearGradient id="band" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0A6BD4"/>
+      <stop offset="1" stop-color="#0057B8"/>
+    </linearGradient>
+    <linearGradient id="handle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E93FF"/>
+      <stop offset="1" stop-color="#0064D6"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="depth" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#004C9F" stop-opacity="0"/>
+      <stop offset="1" stop-color="#004C9F" stop-opacity="0.2"/>
+    </linearGradient>
+    <clipPath id="bodyClip">
+      <rect x="244" y="414" width="536" height="338" rx="74" ry="74"/>
+    </clipPath>
+  </defs>
+
+  <!-- 满版白底（供 maskable / apple-touch-icon 使用） -->
+  <rect x="0" y="0" width="1024" height="1024" fill="#FFFFFF"/>
+
+  <g transform="translate(512,512) scale(0.82) translate(-512,-512) translate(0,-12)">
+    <path d="M400 432 V374 a54 54 0 0 1 54 -54 h116 a54 54 0 0 1 54 54 v58"
+          fill="none" stroke="url(#handle)" stroke-width="52" stroke-linecap="round"/>
+    <rect x="244" y="414" width="536" height="338" rx="74" ry="74" fill="url(#body)"/>
+    <g clip-path="url(#bodyClip)">
+      <rect x="244" y="480" width="536" height="92" fill="url(#band)"/>
+      <rect x="244" y="414" width="536" height="120" fill="url(#sheen)"/>
+      <rect x="244" y="662" width="536" height="90" fill="url(#depth)"/>
+    </g>
+    <rect x="440" y="496" width="144" height="66" rx="21" ry="21" fill="#FFFFFF"/>
+    <rect x="486" y="514" width="52" height="30" rx="15" ry="15" fill="#0A84FF" fill-opacity="0.5"/>
+  </g>
+</svg>

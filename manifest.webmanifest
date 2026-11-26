@@ -1,0 +1,17 @@
+{
+  "name": "动力二组库房管理系统",
+  "short_name": "库房管理",
+  "description": "备件台账、出入库登记与共享包，数据只存本机。",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5F5F7",
+  "theme_color": "#007AFF",
+  "icons": [
+    { "src": "assets/logo-v3-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/logo-v3-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/logo-v3-maskable.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/logo-v3-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}
