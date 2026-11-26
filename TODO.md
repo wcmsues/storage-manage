@@ -290,6 +290,7 @@
   - G2：仓库 `https://github.com/wcmsues/storage-manage`（`main`），用户已开启 Pages，线上地址 `https://wcmsues.github.io/storage-manage/` 已生效；实测 index 200、manifest 200（`application/manifest+json`）、`sw.js` 200、图标 200，线上 `APP_VERSION` 0.6.1 与 `sw.js` 缓存名一致。
   - 体验修正 0.6.1：手机端固定缩放（viewport 锁缩放、`touch-action:manipulation`、`text-size-adjust:100%`、表单手机端 16px）；移动视口实测无横向溢出、零报错。
   - G5：设置页「数据」卡新增升级提醒（升级 / 换电脑 / 换浏览器前先导出共享包）；headless Chrome 实测「0.5.0 同名同路径覆盖为 0.6.2」后台账、明细、PIN 全在，新样式生效，零报错；另确认 Chromium 下 `file://` 共享同一 origin，换路径仍读到同一份数据（不依赖该行为，纪律不变）。
+  - 体验修正（导航文案）：侧栏（≥1024px）与平顶栏（768–1023px）改用完整标签「库存台账 / 出入库登记 / 出入库明细 / 系统设置」，手机底部 Tab（≤767px）保持「台账 / 登记 / 明细 / 设置」；实现为 `NAV` 增加 `labelLong`，渲染同时输出 `.nl-short` / `.nl-long` 两个 span，由 `@media (min-width:768px)` 切换，隐藏项用 `display:none` 不参与读屏；实测 500px 视口 `long=none short=inline`、底栏 4 项无横向溢出，1280/800px `long=inline`。页面正文 h1 仍用短标题（未改，待确认）。
 - 进行中：无。
 - 下一步：C4（P2 批量登记，待用户确认是否要做）；继续收集用户使用中的小问题，按 P1 逐条修。
 - 未开始：C4。
@@ -326,6 +327,7 @@
 | 2026-11-26 | 体验修正 0.6.1：手机端固定缩放 —— viewport 加 `maximum-scale=1, user-scalable=no`；`body` 与按钮/链接/label 加 `touch-action:manipulation` 去掉双击缩放；`html` 加 `text-size-adjust:100%` 防横屏文字自动放大；手机表单 `.input` 字号 15px → 16px（iOS 聚焦输入框 <16px 会强制放大）；`sw.js` 缓存名同步 0.6.1 |
 | 2026-11-26 | 推送 0.6.1 并确认 Pages 生效：`133f18c` fix(zoom)；线上首页 / manifest / sw.js / 图标均 200，manifest MIME 为 `application/manifest+json`，线上版本 0.6.1；G2 置完成 |
 | 2026-11-26 | G5 完成 0.6.2：设置页「数据」卡底部新增「升级 / 换电脑 / 换浏览器前先导出共享包」提醒；实测 0.5.0 → 0.6.2 同名同路径覆盖后台账、明细、PIN 与数据 key 全部保留；`sw.js` 缓存名同步 0.6.2 |
+| 2026-11-26 | 导航文案按端区分：桌面/平板用「库存台账 / 出入库登记 / 出入库明细 / 系统设置」，手机底部 Tab 保持短标签；`NAV` 增 `labelLong` 双 span + `@media (min-width:768px)` 切换；版本号与 `sw.js` 缓存名不变 |
 
 
 
