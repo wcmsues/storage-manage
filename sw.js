@@ -1,7 +1,7 @@
 /* 动力二组库房管理系统 · 离线缓存
    只在 http(s) 下注册（index.html 内按协议判断），file:// 不加载本文件。
    升级版本时改 CACHE 名即可淘汰旧缓存，业务数据存 localStorage，不受影响。 */
-const CACHE = "spare-warehouse-v0.6.1";
+const CACHE = "spare-warehouse-v0.6.2";
 const ASSETS = [
   "./index.html",
   "./manifest.webmanifest",

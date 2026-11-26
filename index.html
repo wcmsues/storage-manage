@@ -488,7 +488,7 @@ body.is-gate{background:var(--bg-page)}
 /* =========================================================
    常量与基础状态
    ========================================================= */
-const APP_VERSION = "0.6.1";
+const APP_VERSION = "0.6.2";
 const KEYS = {
   data: "spare.warehouse.v2",
   pin: "spare.warehouse.pin.v2",
@@ -1709,6 +1709,7 @@ function viewSettings() {
         "</div></div></div>" +
         '<div class="row"><div class="row-main"><div class="row-title">清空本机数据</div><div class="row-sub">删除库房、台账、明细与 PIN，无法撤销</div></div>' +
           '<div class="row-actions"><button type="button" class="btn btn-ghost btn-sm danger-text" data-act="clearData">清空</button></div></div>' +
+        '<p class="card-note">升级、换电脑或换浏览器前，先导出共享包。数据只存在当前浏览器的本机存储里，清浏览器数据会丢失。</p>' +
       "</section>" +
 
       '<section class="card"><h2 class="card-title">关于</h2>' +
