@@ -211,6 +211,7 @@ select.input{appearance:none;-webkit-appearance:none;padding-right:36px}
   .search-wrap{flex:1 1 100%;max-width:none}
   .search-wrap svg{left:12px}
   .select-wrap{min-width:0;flex:1 1 calc(50% - 5px);max-width:calc(50% - 5px)}
+  .select-wrap.sel-wide{flex:1 1 100%;max-width:100%}
   .select-wrap::after{right:16px;width:8px;height:8px;margin-top:-5px}
   .field .select-wrap{max-width:100%}
 }
@@ -245,6 +246,12 @@ select.input{appearance:none;-webkit-appearance:none;padding-right:36px}
 .cell-sub{font-size:11px;color:var(--label-2)}
 .qty{font-size:12.5px}
 .unit{font-size:11px;color:var(--label-3);margin-left:2px;white-space:nowrap}
+/* 台账与明细表列多：内边距收一档，避免列被挤出可用宽度 */
+.table-ledger th,.table-ledger td,.table-logs th,.table-logs td{padding-left:12px;padding-right:12px}
+.table .idx{color:var(--label-3)}
+/* 明细「入库/出库」「日期」两列内容窄，内边距再收一档，把宽度让给规格与事由 */
+.table-logs th:nth-child(2),.table-logs td:nth-child(2),
+.table-logs th:nth-child(3),.table-logs td:nth-child(3){padding-left:8px;padding-right:8px}
 /* 平板与窄桌面：列多，收窄单元格内边距，避免数量/徽章被挤压 */
 @media (min-width:768px) and (max-width:1279px){
   .table th,.table td{padding-left:10px;padding-right:10px}
@@ -461,14 +468,42 @@ body.modal-open{overflow:hidden}
 .stock-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin-top:8px;font-size:12px;color:var(--label-2);min-height:18px}
 .stock-line b{font-weight:500;color:var(--label-1)}
 .stock-line .stock-over,.stock-line .stock-over b{color:var(--red)}
+
+/* ---------- 选件器（可输入 + 候选面板） ---------- */
+.picker{position:relative}
+.picker-box{display:flex;align-items:center;gap:8px}
+.picker-box .input{flex:1;min-width:0}
+.picker-all{flex:none;height:36px}
+.picker-panel{
+  position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;
+  background:var(--bg-elevated);border:0.5px solid var(--separator);
+  border-radius:var(--r-md);padding:4px;max-height:min(60vh,340px);overflow:auto;
+}
+.picker-panel[hidden]{display:none}
+.picker-item{
+  display:flex;width:100%;gap:10px;align-items:center;justify-content:space-between;
+  padding:8px 10px;border-radius:var(--r-sm);text-align:left;
+}
+.picker-item:hover,.picker-item.is-active{background:var(--bg-fill-2)}
+.picker-item[aria-selected="true"] .picker-name{color:var(--blue)}
+.picker-main{display:flex;flex-direction:column;flex:1;min-width:0}
+.picker-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picker-sub{font-size:11px;color:var(--label-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picker-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+.picker-qty{font-size:13px;white-space:nowrap}
+.picker-empty{padding:10px 8px;font-size:12px;color:var(--label-2);text-align:center}
 @media (max-width:767px){
   .seg span{min-height:44px;padding:0 12px;font-size:15px}
   .stock-line{font-size:13px}
+  .picker-all{height:44px;font-size:14px}
+  .picker-panel{max-height:min(52vh,320px)}
+  .picker-name{font-size:14px}
+  .picker-sub{font-size:12px}
   .submit-dock{position:fixed;left:16px;right:16px;z-index:35;bottom:calc(64px + env(safe-area-inset-bottom) + 12px);height:50px;border-radius:var(--r-card)}
 }
 
 /* ---------- 明细筛选与分页 ---------- */
-.range-wrap{display:flex;align-items:center;gap:8px;flex:1 1 280px;max-width:360px}
+.range-wrap{display:flex;align-items:center;gap:8px;flex:1 1 240px;max-width:360px}
 .range-wrap .input{flex:1;min-width:0}
 .range-sep{flex:none;font-size:12px;color:var(--label-2)}
 .list-meta{font-size:12px;color:var(--label-2)}
@@ -537,7 +572,7 @@ body.is-gate{background:var(--bg-page)}
 /* =========================================================
    常量与基础状态
    ========================================================= */
-const APP_VERSION = "0.7.1";
+const APP_VERSION = "0.9.0";
 const KEYS = {
   data: "spare.warehouse.v3",
   pin: "spare.warehouse.pin.v3",
@@ -569,7 +604,7 @@ let data = null;
 const ui = {
   view: "ledger", q: "", wh: "", type: "",
   regPart: "", regType: "in",
-  logQ: "", logType: "", logWh: "", logFrom: "", logTo: "", logPart: "", logLimit: 0
+  logQ: "", logType: "", logCat: "", logWh: "", logFrom: "", logTo: "", logPart: "", logLimit: 0
 };
 const collator = new Intl.Collator("zh-Hans-CN", { numeric: true, sensitivity: "base" });
 
@@ -1084,8 +1119,7 @@ function wireFileLabel(label) {
 /* =========================================================
    下载
    ========================================================= */
-function downloadFile(filename, text, mime) {
-  const blob = new Blob([text], { type: (mime || "application/json") + ";charset=utf-8" });
+function downloadBlob(filename, blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = filename;
@@ -1093,6 +1127,9 @@ function downloadFile(filename, text, mime) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+function downloadFile(filename, text, mime) {
+  downloadBlob(filename, new Blob([text], { type: (mime || "application/json") + ";charset=utf-8" }));
 }
 function fileStamp() {
   const d = new Date();
@@ -1105,57 +1142,294 @@ function csvCell(v) {
 function csvText(rows) {
   return "\uFEFF" + rows.map(row => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }
-function exportLedgerCsv() {
-  if (!data.parts.length) return toast("台账还是空的，没有可导出的台账项", "error");
-  const rows = [["库房名", "类别", "名称", "厂家", "规格/型号", "位置", "单位", "数量", "保管维护人", "备注"]];
-  sortedParts().forEach(p => {
-    const w = warehouseById(p.warehouseId);
-    rows.push([
-      w ? w.name : "", typeLabel(p.type), p.name, p.maker, p.model,
-      p.loc, p.unit, p.qty, p.keeper, p.note
-    ]);
-  });
+/* 列定义唯一来源：CSV 与 xlsx 共用，改列头只改这里（列头以 模版/ 两份 xlsx 为准） */
+const LEDGER_COLS = [
+  { key: "idx", label: "序号", width: 6, type: "num" },
+  { key: "name", label: "物品/工具名称", width: 16.38 },
+  { key: "maker", label: "厂家", width: 8.15 },
+  { key: "model", label: "规格/型号", width: 28.92 },
+  { key: "qty", label: "数量", width: 6, type: "num" },
+  { key: "unit", label: "单位", width: 6 },
+  { key: "wh", label: "库房名", width: 10.31 },
+  { key: "loc", label: "存放位置", width: 10.77 },
+  { key: "keeper", label: "保管维护人", width: 10.77 },
+  { key: "note", label: "备注", width: 24 }
+];
+const LOG_COLS = [
+  { key: "idx", label: "序号", width: 6, type: "num" },
+  { key: "dir", label: "入库/出库", width: 11.54 },
+  { key: "date", label: "日期", width: 10.92, type: "date" },
+  { key: "name", label: "物品/工具名称", width: 16.38 },
+  { key: "maker", label: "厂家", width: 8.15 },
+  { key: "model", label: "规格/型号", width: 28.92 },
+  { key: "qty", label: "数量", width: 6, type: "num" },
+  { key: "unit", label: "单位", width: 6 },
+  { key: "reason", label: "事由", width: 10.31 },
+  { key: "wh", label: "库房名", width: 10.31 },
+  { key: "loc", label: "存放位置", width: 10.77 },
+  { key: "operator", label: "经办人", width: 8.15 },
+  { key: "note", label: "备注", width: 24 }
+];
+function exportCols(kind) {
+  return kind === "ledger" ? LEDGER_COLS : LOG_COLS;
+}
+function exportValues(kind, list) {
+  if (kind === "ledger") {
+    return list.map((p, i) => {
+      const w = warehouseById(p.warehouseId);
+      return {
+        idx: i + 1, name: p.name, maker: p.maker, model: p.model,
+        qty: p.qty, unit: p.unit, wh: w ? w.name : "",
+        loc: p.loc, keeper: p.keeper, note: p.note
+      };
+    });
+  }
+  return list.map((l, i) => ({
+    idx: i + 1, dir: l.type === "in" ? "入库" : "出库", date: l.date,
+    name: logTitle(l), maker: logMaker(l), model: logModel(l),
+    qty: l.qty, unit: l.part.unit || "", reason: l.reason,
+    wh: logWarehouseName(l), loc: logLoc(l), operator: l.operator, note: l.note
+  }));
+}
+function exportLedgerCsv(list, scope) {
+  const rows = [exportCols("ledger").map(c => c.label)]
+    .concat(exportValues("ledger", list).map(v => exportCols("ledger").map(c => v[c.key])));
   try {
     downloadFile("备件台账-" + fileStamp() + ".csv", csvText(rows), "text/csv");
-    toast("台账 CSV 已导出（" + n(rows.length - 1) + " 项）");
+    toast("台账 CSV 已导出（" + n(list.length) + " 项" + (scope === "all" ? "" : "，当前筛选") + "）");
   } catch (ex) {
     toast("导出失败：" + ex.message, "error");
   }
 }
-function logCsvTime(log) {
-  const clock = fmtClock(log.createdAt);
-  return String(log.date || "") + (clock ? " " + clock : "");
-}
-function exportLogsCsv(logs, scopeLabel) {
-  const rows = [["时间", "出入库", "类别", "名称", "厂家", "规格/型号", "数量", "单位", "结存", "事由", "经办人", "库房", "位置", "备注"]];
-  logs.forEach(l => {
-    rows.push([
-      logCsvTime(l), l.type === "in" ? "入库" : "出库", typeLabel(logTypeOf(l)),
-      logTitle(l), logMaker(l), logModel(l),
-      l.qty, l.part.unit, l.balance, l.reason, l.operator, logWarehouseName(l), logLoc(l), l.note
-    ]);
-  });
+function exportLogsCsv(list, scope) {
+  const rows = [exportCols("logs").map(c => c.label)]
+    .concat(exportValues("logs", list).map(v => exportCols("logs").map(c => v[c.key])));
   try {
     downloadFile("出入库明细-" + fileStamp() + ".csv", csvText(rows), "text/csv");
-    toast(scopeLabel + " CSV 已导出（" + n(logs.length) + " 笔）");
+    toast("明细 CSV 已导出（" + n(list.length) + " 笔" + (scope === "all" ? "" : "，当前筛选") + "）");
   } catch (ex) {
     toast("导出失败：" + ex.message, "error");
   }
 }
-function openLogsCsvDialog() {
-  const all = sortedLogs();
-  if (!all.length) return toast("还没有出入库明细", "error");
-  const filterOn = logFilterOn();
-  if (!filterOn) return exportLogsCsv(all, "全部明细");
-  const filtered = filteredLogs();
-  if (!filtered.length) return toast("当前筛选没有记录，请调整条件后再导出", "error");
+
+/* =========================================================
+   xlsx 导出（自写 ZIP + OOXML，无第三方库）
+   - ZIP 全用 STORE（不压缩），不依赖 CompressionStream，全端可用
+   - 字符串一律 inlineStr；数量与序号写数字；日期写真日期（numFmt 14）
+   ========================================================= */
+const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const XML_HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    t[i] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function zipStore(files) {
+  const enc = new TextEncoder();
+  const parts = [];
+  const central = [];
+  let offset = 0;
+  files.forEach(f => {
+    const name = enc.encode(f.name);
+    const data = f.data;
+    const crc = crc32(data);
+    const head = new Uint8Array(30);
+    const hv = new DataView(head.buffer);
+    hv.setUint32(0, 0x04034b50, true);
+    hv.setUint16(4, 20, true);
+    hv.setUint16(6, 0x0800, true);
+    hv.setUint16(8, 0, true);
+    hv.setUint16(10, 0, true);
+    hv.setUint16(12, 0x21, true);
+    hv.setUint32(14, crc, true);
+    hv.setUint32(18, data.length, true);
+    hv.setUint32(22, data.length, true);
+    hv.setUint16(26, name.length, true);
+    hv.setUint16(28, 0, true);
+    parts.push(head, name, data);
+    const cd = new Uint8Array(46);
+    const cv = new DataView(cd.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint16(12, 0, true);
+    cv.setUint16(14, 0x21, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, data.length, true);
+    cv.setUint32(24, data.length, true);
+    cv.setUint16(28, name.length, true);
+    cv.setUint16(30, 0, true);
+    cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true);
+    cv.setUint16(36, 0, true);
+    cv.setUint32(38, 0, true);
+    cv.setUint32(42, offset, true);
+    central.push(cd, name);
+    offset += head.length + name.length + data.length;
+  });
+  const cdSize = central.reduce((s, c) => s + c.length, 0);
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, cdSize, true);
+  ev.setUint32(16, offset, true);
+  return new Blob(parts.concat(central, [eocd]), { type: XLSX_MIME });
+}
+function xlsxEsc(v) {
+  return String(v)
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function colRef(i) {
+  let s = "";
+  let x = i + 1;
+  while (x > 0) {
+    const m = (x - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    x = Math.floor((x - 1) / 26);
+  }
+  return s;
+}
+function dateSerial(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso == null ? "" : iso));
+  if (!m) return null;
+  const t = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+  return isNaN(t) ? null : Math.round((t - Date.UTC(1899, 11, 30)) / 86400000);
+}
+function xlsxCell(ref, val, type) {
+  if (val === "" || val == null) return '<c r="' + ref + '" s="0"/>';
+  if (type === "num" && typeof val === "number" && isFinite(val)) {
+    return '<c r="' + ref + '" s="0"><v>' + val + "</v></c>";
+  }
+  if (type === "date") {
+    const serial = dateSerial(val);
+    if (serial != null) return '<c r="' + ref + '" s="1"><v>' + serial + "</v></c>";
+  }
+  return '<c r="' + ref + '" s="0" t="inlineStr"><is><t xml:space="preserve">' + xlsxEsc(val) + "</t></is></c>";
+}
+function xlsxSheet(cols, values) {
+  const colsXml = cols.map((c, i) =>
+    '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + c.width + '" customWidth="1"/>').join("");
+  const header = '<row r="1">' +
+    cols.map((c, i) => xlsxCell(colRef(i) + "1", c.label, "text")).join("") + "</row>";
+  const body = values.map((row, ri) => {
+    const r = ri + 2;
+    return '<row r="' + r + '">' +
+      cols.map((c, i) => xlsxCell(colRef(i) + r, row[c.key], c.type || "text")).join("") + "</row>";
+  }).join("");
+  return XML_HEAD +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<dimension ref="A1:' + colRef(cols.length - 1) + (values.length + 1) + '"/>' +
+    '<sheetViews><sheetView workbookViewId="0"/></sheetViews>' +
+    '<sheetFormatPr defaultColWidth="9.23076923076923" defaultRowHeight="16.8"/>' +
+    "<cols>" + colsXml + "</cols>" +
+    "<sheetData>" + header + body + "</sheetData></worksheet>";
+}
+function xlsxBlob(cols, values) {
+  const enc = new TextEncoder();
+  const part = (name, str) => ({ name, data: enc.encode(str) });
+  return zipStore([
+    part("[Content_Types].xml", XML_HEAD +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      "</Types>"),
+    part("_rels/.rels", XML_HEAD +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      "</Relationships>"),
+    part("xl/workbook.xml", XML_HEAD +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<sheets><sheet name="sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>'),
+    part("xl/_rels/workbook.xml.rels", XML_HEAD +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+      "</Relationships>"),
+    part("xl/styles.xml", XML_HEAD +
+      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<fonts count="1"><font><sz val="11"/><name val="宋体"/><charset val="134"/></font></fonts>' +
+      '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>' +
+      '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="2">' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+      '<xf numFmtId="14" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+      "</cellXfs>" +
+      '<cellStyles count="1"><cellStyle name="常规" xfId="0" builtinId="0"/></cellStyles>' +
+      "</styleSheet>"),
+    part("xl/worksheets/sheet1.xml", xlsxSheet(cols, values))
+  ]);
+}
+function exportXlsx(kind, list, scope) {
+  const cols = exportCols(kind);
+  const values = exportValues(kind, list);
+  try {
+    downloadBlob((kind === "ledger" ? "备件台账-" : "出入库明细-") + fileStamp() + ".xlsx",
+      xlsxBlob(cols, values));
+    toast((kind === "ledger" ? "台账" : "明细") + " Excel 已导出（" + n(list.length) +
+      (kind === "ledger" ? " 项" : " 笔") + (scope === "all" ? "" : "，当前筛选") + "）");
+  } catch (ex) {
+    toast("导出失败：" + ex.message, "error");
+  }
+}
+
+/* 导出口径：无筛选直接导全部；有筛选先选范围，Excel 为主、CSV 为次 */
+function ledgerFilterOn() {
+  return !!(ui.q.trim() || ui.wh || ui.type);
+}
+function exportContext(kind) {
+  if (kind === "ledger") {
+    return { all: sortedParts(), filtered: filteredParts(), on: ledgerFilterOn(), unit: "项" };
+  }
+  return { all: sortedLogs(), filtered: filteredLogs(), on: logFilterOn(), unit: "笔" };
+}
+function openExportDialog(kind) {
+  const ctx = exportContext(kind);
+  if (!ctx.all.length) {
+    return toast(kind === "ledger" ? "台账还是空的，没有可导出的台账项" : "还没有出入库明细", "error");
+  }
+  if (!ctx.on) return exportXlsx(kind, ctx.all, "all");
+  if (!ctx.filtered.length) return toast("当前筛选没有记录，请调整条件后再导出", "error");
+  const run = (el, fmt) => {
+    const picked = el.querySelector('input[name="expScope"]:checked');
+    const scope = picked && picked.value === "all" ? "all" : "filtered";
+    const list = scope === "all" ? ctx.all : ctx.filtered;
+    return fmt === "csv"
+      ? (kind === "ledger" ? exportLedgerCsv(list, scope) : exportLogsCsv(list, scope))
+      : exportXlsx(kind, list, scope);
+  };
   openModal({
-    title: "导出明细 CSV",
-    body: '<p>当前筛选 ' + n(filtered.length) + " 笔，全部 " + n(all.length) + " 笔。文件为 UTF-8 CSV，可用 Excel 直接打开。</p>",
+    title: kind === "ledger" ? "导出台账" : "导出明细",
+    body: '<p>当前筛选 ' + n(ctx.filtered.length) + " " + ctx.unit + "，全部 " +
+      n(ctx.all.length) + " " + ctx.unit + "。Excel 列头与本机模板一致。</p>" +
+      '<div class="field"><label id="expScopeLabel">导出范围</label>' +
+        '<div class="seg" role="radiogroup" aria-labelledby="expScopeLabel">' +
+          '<label><input type="radio" name="expScope" value="filtered" checked><span>当前筛选</span></label>' +
+          '<label><input type="radio" name="expScope" value="all"><span>全部</span></label>' +
+        "</div>" +
+      "</div>",
     actions: [
-      { label: "导出全部", kind: "secondary", onClick: () => exportLogsCsv(all, "全部明细") },
-      { label: "导出当前筛选", kind: "primary", onClick: () => exportLogsCsv(filtered, "当前筛选") }
-    ]
+      { label: "导出 CSV", kind: "secondary", onClick: el => run(el, "csv") },
+      { label: "导出 Excel", kind: "primary", onClick: el => run(el, "xlsx") }
+    ],
+    focus: '[data-modal-btn="1"]'
   });
 }
 function buildPackage() {
@@ -1384,14 +1658,15 @@ function ledgerListHTML() {
   if (list.length === 0) {
     return '<div class="empty"><p>没有符合当前条件的台账项。</p><button type="button" class="btn btn-secondary" data-act="clearFilters">清空筛选</button></div>';
   }
-  const rows = list.map(p => {
+  const rows = list.map((p, i) => {
     const w = warehouseById(p.warehouseId);
     const attrs = ' data-act="openPart" data-id="' + esc(p.id) + '" tabindex="0" role="button"';
-    const sub = [typeLabel(p.type), p.model || "无规格"].join(" · ");
     return '<tr' + attrs + ">" +
-      '<td><span class="cell-main">' + esc(p.name) + '</span><span class="cell-sub"> ' + esc(sub) + "</span></td>" +
+      '<td class="idx">' + n(i + 1) + "</td>" +
+      '<td><span class="cell-main">' + esc(p.name) + '</span><span class="cell-sub"> ' + esc(typeLabel(p.type)) + "</span></td>" +
       "<td>" + esc(p.maker || "—") + "</td>" +
-      '<td class="num"><span class="qty">' + n(p.qty) + '</span><span class="unit">' + esc(p.unit) + "</span></td>" +
+      '<td title="' + esc(p.model) + '">' + esc(p.model || "—") + "</td>" +
+      '<td class="num"><span class="qty">' + n(p.qty) + '</span><span class="unit">' + esc(p.unit || "") + "</span></td>" +
       "<td>" + esc(w ? w.name : "—") + "</td>" +
       "<td>" + esc(p.loc || "—") + "</td>" +
       "<td>" + statusBadge(p.qty) + "</td>" +
@@ -1402,11 +1677,11 @@ function ledgerListHTML() {
   const cards = list.map(p => {
     const w = warehouseById(p.warehouseId);
     const attrs = ' data-act="openPart" data-id="' + esc(p.id) + '" role="button" tabindex="0"';
-    const sub = [typeLabel(p.type), p.maker || "无厂家", p.model || "无规格"].join(" · ");
+    const sub = [p.maker || "无厂家", p.model || "无规格"].join(" · ");
     const place = [w ? w.name : "库房已删除", p.loc].filter(Boolean).join(" · ");
     return '<div class="mcard"' + attrs + ">" +
       '<div class="mcard-main">' +
-        '<div class="mcard-title">' + esc(p.name) + "</div>" +
+        '<div class="mcard-title">' + esc(p.name) + '<span class="mcard-flag">' + esc(typeLabel(p.type)) + "</span></div>" +
         '<div class="mcard-sub">' + esc(sub) + "</div>" +
         '<div class="mcard-note">' + esc(place) + "</div>" +
       "</div>" +
@@ -1418,9 +1693,9 @@ function ledgerListHTML() {
   }).join("");
 
   return '<div class="mlist">' + cards + "</div>" +
-    '<div class="card table-card"><table class="table">' +
-      "<colgroup><col style=\"width:22%\"><col style=\"width:13%\"><col style=\"width:9%\"><col style=\"width:14%\"><col style=\"width:13%\"><col style=\"width:11%\"><col style=\"width:18%\"></colgroup>" +
-      "<thead><tr><th scope=\"col\">名称 / 规格</th><th scope=\"col\">厂家</th><th scope=\"col\" class=\"num\">数量</th><th scope=\"col\">库房</th><th scope=\"col\">位置</th><th scope=\"col\">状态</th><th scope=\"col\">备注</th></tr></thead>" +
+    '<div class="card table-card"><table class="table table-ledger">' +
+      "<colgroup><col style=\"width:5%\"><col style=\"width:18%\"><col style=\"width:10%\"><col style=\"width:15%\"><col style=\"width:7.5%\"><col style=\"width:10%\"><col style=\"width:12%\"><col style=\"width:8%\"><col style=\"width:14.5%\"></colgroup>" +
+      "<thead><tr><th scope=\"col\">序号</th><th scope=\"col\">物品/工具名称</th><th scope=\"col\">厂家</th><th scope=\"col\">规格/型号</th><th scope=\"col\" class=\"num\">数量</th><th scope=\"col\">库房</th><th scope=\"col\">物品/工具位置</th><th scope=\"col\">状态</th><th scope=\"col\">备注</th></tr></thead>" +
       "<tbody>" + rows + "</tbody></table></div>";
 }
 function ledgerBodyHTML() {
@@ -1435,7 +1710,7 @@ function viewLedger() {
   const total = data.parts.length;
   const k = kpis();
   const actions =
-    (total ? '<button type="button" class="btn btn-secondary btn-sm" data-act="exportLedger">导出 CSV</button>' : "") +
+    (total ? '<button type="button" class="btn btn-secondary" data-act="exportLedger">导出 Excel</button>' : "") +
     (isAdmin() ? '<button type="button" class="btn btn-primary" data-act="addPart">新增物品 / 工具</button>' : "");
   return sourceBanner() +
     '<section class="page">' +
@@ -1459,19 +1734,112 @@ function viewLedger() {
 /* =========================================================
    页面：登记
    ========================================================= */
-function partOptionsHTML(selectedId) {
-  const groups = [];
-  sortedParts().forEach(p => {
+/* 选件器：可输入 + 候选面板（纯原生，键盘可操作） */
+function partLabel(p) {
+  if (!p) return "";
+  return p.name + (p.model ? " · " + p.model : "") + "（" + typeLabel(p.type) + "）";
+}
+function normText(s) {
+  return String(s == null ? "" : s).normalize("NFKC").toLowerCase();
+}
+/* 空格分词 AND；名称前缀 > 名称包含 > 其它字段；同分沿用台账排序 */
+function matchParts(query) {
+  const tokens = normText(query).split(/\s+/).filter(Boolean);
+  const hits = [];
+  sortedParts().forEach((p, idx) => {
     const w = warehouseById(p.warehouseId);
-    const key = w ? w.id : "__missing";
-    let g = groups.find(x => x.key === key);
-    if (!g) { g = { key, label: w ? w.name : "库房已删除", items: [] }; groups.push(g); }
-    g.items.push(p);
+    const name = normText(p.name);
+    const hay = normText([p.name, p.maker, p.model, p.loc, p.keeper, p.note,
+      w ? w.name : "", typeLabel(p.type)].join(" "));
+    let score = 0;
+    for (let i = 0; i < tokens.length; i++) {
+      const t = tokens[i];
+      if (name.indexOf(t) === 0) score += 4;
+      else if (name.indexOf(t) > -1) score += 3;
+      else if (hay.indexOf(t) > -1) score += 1;
+      else return;
+    }
+    hits.push({ p: p, score: score, idx: idx });
   });
-  return groups.map(g => '<optgroup label="' + esc(g.label) + '">' +
-    g.items.map(p => '<option value="' + esc(p.id) + '"' + (p.id === selectedId ? " selected" : "") + ">" +
-      esc(p.name) + (p.model ? " · " + esc(p.model) : "") + "（" + typeLabel(p.type) + "）</option>").join("") +
-    "</optgroup>").join("");
+  hits.sort((a, b) => (b.score - a.score) || (a.idx - b.idx));
+  return hits.map(h => h.p);
+}
+const picker = { open: false, active: -1, list: [] };
+const PICKER_MAX = 8;
+
+function pickerItemHTML(p, i) {
+  const w = warehouseById(p.warehouseId);
+  const meta = [p.maker, p.model].filter(Boolean).join(" · ") || "无厂家 / 规格";
+  const place = [w ? w.name : "库房已删除", p.loc].filter(Boolean).join(" · ") || "未填位置";
+  return '<button type="button" class="picker-item' + (i === picker.active ? " is-active" : "") +
+    '" role="option" id="logPartOpt' + i + '" aria-selected="' + (p.id === ui.regPart) +
+    '" data-pick="' + esc(p.id) + '">' +
+    '<span class="picker-main">' +
+      '<span class="picker-name">' + esc(p.name) + '<span class="mcard-flag">' + esc(typeLabel(p.type)) + "</span></span>" +
+      '<span class="picker-sub">' + esc(meta) + "</span>" +
+      '<span class="picker-sub">' + esc(place) + "</span>" +
+    "</span>" +
+    '<span class="picker-side">' +
+      '<span class="picker-qty">' + n(p.qty) + '<span class="unit">' + esc(p.unit) + "</span></span>" +
+      statusBadge(p.qty) +
+    "</span>" +
+    "</button>";
+}
+function pickerRender(form, browse) {
+  const panel = form.querySelector("#logPartPanel");
+  const input = form.querySelector("#logPartInput");
+  if (!panel || !input) return;
+  const q = input.value.trim();
+  const all = q ? matchParts(q) : sortedParts();
+  const list = q && !browse ? all.slice(0, PICKER_MAX) : all;
+  picker.list = list;
+  picker.active = list.length ? 0 : -1;
+  picker.open = true;
+  panel.innerHTML = list.length
+    ? list.map((p, i) => pickerItemHTML(p, i)).join("") +
+      (all.length > list.length
+        ? '<div class="picker-empty">还有 ' + n(all.length - list.length) + " 项，继续输入缩小范围，或点「浏览全部」</div>"
+        : "")
+    : '<div class="picker-empty">没有匹配的物品 / 工具，换个关键词或点「浏览全部」</div>';
+  panel.hidden = false;
+  input.setAttribute("aria-expanded", "true");
+  if (picker.active >= 0) input.setAttribute("aria-activedescendant", "logPartOpt" + picker.active);
+}
+function pickerClose(form) {
+  const panel = form.querySelector("#logPartPanel");
+  const input = form.querySelector("#logPartInput");
+  picker.open = false; picker.active = -1; picker.list = [];
+  if (panel) { panel.hidden = true; panel.innerHTML = ""; }
+  if (input) {
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
+    const p = partById(ui.regPart);
+    if (p) input.value = partLabel(p);
+  }
+}
+function pickerSelect(form, id) {
+  const p = partById(id);
+  if (!p) return;
+  ui.regPart = p.id;
+  pickerClose(form);
+  const input = form.querySelector("#logPartInput");
+  if (input) { input.value = partLabel(p); input.select(); }
+  updateLogStockLine(form);
+}
+function pickerMove(form, dir) {
+  if (!picker.open) { pickerRender(form, false); return; }
+  if (!picker.list.length) return;
+  picker.active = (picker.active + dir + picker.list.length) % picker.list.length;
+  const panel = form.querySelector("#logPartPanel");
+  const input = form.querySelector("#logPartInput");
+  if (panel) {
+    Array.prototype.forEach.call(panel.querySelectorAll(".picker-item"), (el, i) => {
+      el.classList.toggle("is-active", i === picker.active);
+    });
+    const act = panel.querySelector(".picker-item.is-active");
+    if (act && act.scrollIntoView) act.scrollIntoView({ block: "nearest" });
+  }
+  if (input) input.setAttribute("aria-activedescendant", "logPartOpt" + picker.active);
 }
 function stockLineHTML(part, qty, type) {
   if (!part) return "";
@@ -1503,8 +1871,14 @@ function viewLog() {
 
   return '<section class="page">' + head +
     '<form id="logForm" class="card log-form" novalidate autocomplete="off">' +
-      '<div class="field"><label for="logPart">物品 / 工具</label>' +
-        '<div class="select-wrap"><select class="input" id="logPart">' + partOptionsHTML(part.id) + "</select></div>" +
+      '<div class="field"><label for="logPartInput">物品 / 工具</label>' +
+        '<div class="picker">' +
+          '<div class="picker-box">' +
+            '<input class="input" id="logPartInput" type="search" role="combobox" aria-expanded="false" aria-controls="logPartPanel" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="输入名称、规格、位置" value="' + esc(partLabel(part)) + '">' +
+            '<button type="button" class="btn btn-secondary picker-all" id="logPartBrowse">浏览全部</button>' +
+          "</div>" +
+          '<div class="picker-panel" id="logPartPanel" role="listbox" aria-label="物品 / 工具候选" hidden></div>' +
+        "</div>" +
         '<div class="stock-line" id="logStockLine">' + stockLineHTML(part, "", type) + "</div>" +
       "</div>" +
       '<div class="field"><label id="logTypeLabel">出入库</label>' +
@@ -1533,7 +1907,7 @@ function viewLog() {
   "</section>";
 }
 function updateLogStockLine(form) {
-  const part = partById(form.querySelector("#logPart").value);
+  const part = partById(ui.regPart);
   const typeEl = form.querySelector('input[name="logType"]:checked');
   const type = typeEl ? typeEl.value : "in";
   const qty = form.querySelector("#logQty").value;
@@ -1556,11 +1930,52 @@ function updateLogStockLine(form) {
   }
 }
 function bindLogForm(form) {
+  const input = form.querySelector("#logPartInput");
+  const panel = form.querySelector("#logPartPanel");
+  const browse = form.querySelector("#logPartBrowse");
+
   form.querySelector("#logQty").addEventListener("input", () => updateLogStockLine(form));
-  form.querySelector("#logPart").addEventListener("change", e => {
-    ui.regPart = e.target.value;
-    updateLogStockLine(form);
-  });
+
+  if (input) {
+    const openFromInput = () => {
+      const p = partById(ui.regPart);
+      if (p && input.value === partLabel(p)) input.value = "";
+      pickerRender(form, false);
+    };
+    input.addEventListener("focus", openFromInput);
+    /* 已经聚焦时再点一次也要能展开（Esc 关闭后重新点选） */
+    input.addEventListener("click", () => { if (!picker.open) openFromInput(); });
+    input.addEventListener("input", () => pickerRender(form, false));
+    input.addEventListener("blur", () => { if (picker.open) pickerClose(form); });
+    input.addEventListener("keydown", e => {
+      if (e.key === "ArrowDown") { e.preventDefault(); pickerMove(form, 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); pickerMove(form, -1); }
+      else if (e.key === "Enter") {
+        if (picker.open && picker.active >= 0 && picker.list[picker.active]) {
+          e.preventDefault();
+          pickerSelect(form, picker.list[picker.active].id);
+        }
+      } else if (e.key === "Escape" && picker.open) {
+        e.preventDefault();
+        pickerClose(form);
+      }
+    });
+  }
+  if (panel) {
+    /* mousedown 抢在 blur 之前，避免点候选时输入框先失焦还原文本 */
+    panel.addEventListener("mousedown", e => {
+      const item = e.target.closest("[data-pick]");
+      if (!item) return;
+      e.preventDefault();
+      pickerSelect(form, item.dataset.pick);
+    });
+  }
+  if (browse) {
+    browse.addEventListener("click", () => {
+      if (input) input.value = "";
+      pickerRender(form, true);
+    });
+  }
   form.querySelectorAll('input[name="logType"]').forEach(el => {
     el.addEventListener("change", () => {
       const checked = form.querySelector('input[name="logType"]:checked');
@@ -1573,8 +1988,11 @@ function bindLogForm(form) {
     const err = form.querySelector("#logError");
     err.textContent = "";
     try {
+      const part = partById(ui.regPart);
+      if (!part) throw new Error("请选择物品 / 工具");
+      if (input && input.value.trim() !== partLabel(part)) throw new Error("请从候选列表里选择物品 / 工具");
       const log = addStockLog({
-        partId: form.querySelector("#logPart").value,
+        partId: part.id,
         type: form.querySelector('input[name="logType"]:checked').value,
         qty: form.querySelector("#logQty").value,
         operator: form.querySelector("#logOperator").value,
@@ -1624,6 +2042,7 @@ function filteredLogs() {
   return sortedLogs().filter(l => {
     if (ui.logPart && l.partId !== ui.logPart) return false;
     if (ui.logType && l.type !== ui.logType) return false;
+    if (ui.logCat && logTypeOf(l) !== ui.logCat) return false;
     if (ui.logWh && logWarehouseId(l) !== ui.logWh) return false;
     if (ui.logFrom && String(l.date) < ui.logFrom) return false;
     if (ui.logTo && String(l.date) > ui.logTo) return false;
@@ -1644,11 +2063,17 @@ function logWhOptionsHTML() {
     '<option value="' + esc(w.id) + '"' + (ui.logWh === w.id ? " selected" : "") + ">" + esc(w.name) + "</option>"
   ).join("");
 }
+function logCatOptionsHTML() {
+  return '<option value="">全部类别</option>' + PART_TYPES.map(t =>
+    '<option value="' + t.id + '"' + (ui.logCat === t.id ? " selected" : "") + ">" + t.label + "</option>"
+  ).join("");
+}
 function activeLogFiltersHTML() {
   const chips = [];
   if (ui.logPart) chips.push("台账项：" + partFilterLabel());
   if (ui.logQ.trim()) chips.push("关键词：" + ui.logQ.trim());
   if (ui.logType) chips.push("出入库：" + (ui.logType === "in" ? "入库" : "出库"));
+  if (ui.logCat) chips.push("类别：" + typeLabel(ui.logCat));
   if (ui.logWh) chips.push("库房：" + warehouseLabel(ui.logWh));
   if (ui.logFrom || ui.logTo) chips.push("日期：" + (ui.logFrom || "最早") + " 至 " + (ui.logTo || "最近"));
   if (!chips.length) return "";
@@ -1656,7 +2081,7 @@ function activeLogFiltersHTML() {
     '<button type="button" class="chip-clear" data-act="clearLogFilters">清空筛选</button></div>';
 }
 function logFilterOn() {
-  return !!(ui.logPart || ui.logQ.trim() || ui.logType || ui.logWh || ui.logFrom || ui.logTo);
+  return !!(ui.logPart || ui.logQ.trim() || ui.logType || ui.logCat || ui.logWh || ui.logFrom || ui.logTo);
 }
 function logsBodyHTML() {
   const all = filteredLogs();
@@ -1672,7 +2097,7 @@ function logsBodyHTML() {
 
   const shown = all.slice(0, ui.logLimit);
 
-  const rows = shown.map(l => {
+  const rows = shown.map((l, i) => {
     const type = l.type === "in" ? '<span class="badge info">入库</span>' : '<span class="badge mute">出库</span>';
     const action = !admin ? "" :
       "<td>" + (l.kind === "reversal" ? '<span class="cell-sub">—</span>'
@@ -1681,10 +2106,12 @@ function logsBodyHTML() {
         : '<button type="button" class="btn btn-ghost btn-sm" data-act="reverseLog" data-id="' + esc(l.id) + '">冲正</button>') + "</td>";
     const why = [l.reason, l.note].filter(Boolean).join(" · ");
     return "<tr>" +
-      '<td title="' + esc(logTimeText(l, true)) + '">' + esc(logTimeText(l)) + "</td>" +
+      '<td class="idx">' + n(i + 1) + "</td>" +
       "<td>" + type + "</td>" +
-      "<td>" + esc(logTitle(l)) + (logModel(l) ? '<span class="cell-sub"> ' + esc(logModel(l)) + "</span>" : "") + "</td>" +
+      '<td title="' + esc(logTimeText(l, true)) + '">' + esc(l.date || logTimeText(l)) + "</td>" +
+      '<td title="' + esc(logTitle(l)) + '">' + esc(logTitle(l)) + '<span class="cell-sub"> ' + esc(typeLabel(logTypeOf(l))) + "</span></td>" +
       "<td>" + esc(logMaker(l) || "—") + "</td>" +
+      '<td title="' + esc(logModel(l)) + '">' + esc(logModel(l) || "—") + "</td>" +
       '<td class="num"><span class="qty">' + (l.type === "in" ? "+" : "−") + n(l.qty) + "</span>" + (l.part.unit ? '<span class="unit">' + esc(l.part.unit) + "</span>" : "") + "</td>" +
       '<td class="num">' + n(l.balance) + "</td>" +
       '<td title="' + esc(why) + '">' + esc(l.reason || "—") + (l.note ? '<span class="cell-sub"> ' + esc(l.note) + "</span>" : "") + "</td>" +
@@ -1719,17 +2146,17 @@ function logsBodyHTML() {
   }).join("");
 
   const colgroup = admin
-    ? "<colgroup><col style=\"width:12%\"><col style=\"width:8%\"><col style=\"width:18%\"><col style=\"width:10%\"><col style=\"width:7%\"><col style=\"width:7%\"><col style=\"width:14%\"><col style=\"width:8%\"><col style=\"width:8%\"><col style=\"width:8%\"></colgroup>"
-    : "<colgroup><col style=\"width:13%\"><col style=\"width:8%\"><col style=\"width:19%\"><col style=\"width:11%\"><col style=\"width:8%\"><col style=\"width:8%\"><col style=\"width:15%\"><col style=\"width:9%\"><col style=\"width:9%\"></colgroup>";
+    ? "<colgroup><col style=\"width:4%\"><col style=\"width:7.5%\"><col style=\"width:10%\"><col style=\"width:14.5%\"><col style=\"width:7%\"><col style=\"width:11%\"><col style=\"width:6.5%\"><col style=\"width:5%\"><col style=\"width:13.5%\"><col style=\"width:7%\"><col style=\"width:6.5%\"><col style=\"width:7.5%\"></colgroup>"
+    : "<colgroup><col style=\"width:4%\"><col style=\"width:7.5%\"><col style=\"width:10%\"><col style=\"width:14.5%\"><col style=\"width:7%\"><col style=\"width:11%\"><col style=\"width:6.5%\"><col style=\"width:5%\"><col style=\"width:21%\"><col style=\"width:7%\"><col style=\"width:6.5%\"></colgroup>";
 
   const rest = all.length - shown.length;
 
   return activeLogFiltersHTML() +
     (filterOn ? '<p class="list-meta">筛选后 ' + n(all.length) + " 笔，当前显示 " + n(shown.length) + " 笔</p>" : "") +
     '<div class="mlist">' + cards + "</div>" +
-    '<div class="card table-card"><table class="table">' +
+    '<div class="card table-card"><table class="table table-logs">' +
       colgroup +
-      "<thead><tr><th scope=\"col\">时间</th><th scope=\"col\">出入库</th><th scope=\"col\">名称 / 规格</th><th scope=\"col\">厂家</th><th scope=\"col\" class=\"num\">数量</th><th scope=\"col\" class=\"num\">结存</th><th scope=\"col\">事由 / 备注</th><th scope=\"col\">经办人</th><th scope=\"col\">库房</th>" +
+      "<thead><tr><th scope=\"col\">序号</th><th scope=\"col\">入库/出库</th><th scope=\"col\">日期</th><th scope=\"col\">物品/工具名称</th><th scope=\"col\">厂家</th><th scope=\"col\">规格/型号</th><th scope=\"col\" class=\"num\">数量</th><th scope=\"col\" class=\"num\">结存</th><th scope=\"col\">事由/备注</th><th scope=\"col\">经办人</th><th scope=\"col\">库房</th>" +
       (admin ? "<th scope=\"col\">操作</th>" : "") + "</tr></thead>" +
       "<tbody>" + rows + "</tbody></table></div>" +
     (rest > 0 ? '<div class="list-more"><button type="button" class="btn btn-secondary" data-act="moreLogs">加载更多（还有 ' + n(rest) + " 笔）</button></div>" : "");
@@ -1744,7 +2171,7 @@ function viewLogs() {
     '<header class="page-head"><div class="page-title"><h1>' + viewTitle("logs") + '</h1><p class="sub">' +
     (total ? "共 " + n(total) + " 笔出入库记录" : "出入库记录") +
     "</p></div>" +
-    (total ? '<div class="page-actions"><button type="button" class="btn btn-secondary btn-sm" data-act="exportLogs">导出 CSV</button></div>' : "") +
+    (total ? '<div class="page-actions"><button type="button" class="btn btn-secondary" data-act="exportLogs">导出 Excel</button></div>' : "") +
     "</header>";
 
   if (!total) {
@@ -1763,7 +2190,8 @@ function viewLogs() {
       '<option value="in"' + (ui.logType === "in" ? " selected" : "") + ">入库</option>" +
       '<option value="out"' + (ui.logType === "out" ? " selected" : "") + ">出库</option>" +
     "</select></div>" +
-    '<div class="select-wrap"><select id="logFilterWh" class="input" aria-label="按库房筛选">' + logWhOptionsHTML() + "</select></div>" +
+    '<div class="select-wrap"><select id="logFilterCat" class="input" aria-label="按类别筛选">' + logCatOptionsHTML() + "</select></div>" +
+    '<div class="select-wrap sel-wide"><select id="logFilterWh" class="input" aria-label="按库房筛选">' + logWhOptionsHTML() + "</select></div>" +
     '<div class="range-wrap">' +
       '<input id="logFrom" class="input" type="date" value="' + esc(ui.logFrom) + '" aria-label="起始日期">' +
       '<span class="range-sep">至</span>' +
@@ -1868,7 +2296,7 @@ function partFilterLabel() {
   return (l.part.name || "已删除台账项") + (l.part.model ? " " + l.part.model : "");
 }
 function showPartLogs(partId) {
-  ui.logQ = ""; ui.logType = ""; ui.logWh = ""; ui.logFrom = ""; ui.logTo = "";
+  ui.logQ = ""; ui.logType = ""; ui.logCat = ""; ui.logWh = ""; ui.logFrom = ""; ui.logTo = "";
   ui.logPart = partId;
   ui.logLimit = logsPageSize();
   ui.view = "logs";
@@ -2399,7 +2827,7 @@ const handlers = {
   reverseLog: el => { const l = data.logs.find(x => x.id === el.dataset.id); if (l) confirmReverse(l); },
   clearFilters: () => { ui.q = ""; ui.wh = ""; ui.type = ""; render(); const q = document.getElementById("q"); if (q) q.focus(); },
   clearLogFilters: () => {
-    ui.logQ = ""; ui.logType = ""; ui.logWh = ""; ui.logFrom = ""; ui.logTo = ""; ui.logPart = "";
+    ui.logQ = ""; ui.logType = ""; ui.logCat = ""; ui.logWh = ""; ui.logFrom = ""; ui.logTo = ""; ui.logPart = "";
     ui.logLimit = logsPageSize();
     render();
     const q = document.getElementById("logQ");
@@ -2414,8 +2842,8 @@ const handlers = {
   forgotPin: () => { closeModal(); openClearDialog(1); },
   importPkg: () => openImportDialog(),
   exportPkg: () => doExport(),
-  exportLedger: () => exportLedgerCsv(),
-  exportLogs: () => openLogsCsvDialog(),
+  exportLedger: () => openExportDialog("ledger"),
+  exportLogs: () => openExportDialog("logs"),
   restoreBak: () => openRestoreDialog(),
   clearData: () => openClearDialog(1)
 };
@@ -2434,6 +2862,14 @@ document.addEventListener("click", e => {
   if (!el || el.disabled) return;
   const fn = handlers[el.dataset.act];
   if (fn) { e.preventDefault(); fn(el); }
+});
+/* 点选件器以外的地方收起候选面板 */
+document.addEventListener("mousedown", e => {
+  if (!picker.open) return;
+  const form = document.getElementById("logForm");
+  if (!form) { picker.open = false; return; }
+  if (e.target.closest("#logPartPanel") || e.target.closest("#logPartInput") || e.target.closest("#logPartBrowse")) return;
+  pickerClose(form);
 });
 document.addEventListener("keydown", e => {
   if ((e.key === "Enter" || e.key === " ") && e.target.matches('[data-act][role="button"]')) {
@@ -2456,6 +2892,7 @@ document.addEventListener("change", e => {
   if (e.target.id === "filterWh") { ui.wh = e.target.value; updateLedgerBody(); }
   if (e.target.id === "filterType") { ui.type = e.target.value; updateLedgerBody(); }
   if (e.target.id === "logFilterType") { ui.logType = e.target.value; ui.logLimit = logsPageSize(); updateLogsBody(); }
+  if (e.target.id === "logFilterCat") { ui.logCat = e.target.value; ui.logLimit = logsPageSize(); updateLogsBody(); }
   if (e.target.id === "logFilterWh") { ui.logWh = e.target.value; ui.logLimit = logsPageSize(); updateLogsBody(); }
   if (e.target.id === "logFrom") { ui.logFrom = e.target.value; ui.logLimit = logsPageSize(); updateLogsBody(); }
   if (e.target.id === "logTo") { ui.logTo = e.target.value; ui.logLimit = logsPageSize(); updateLogsBody(); }
